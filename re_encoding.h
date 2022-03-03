@@ -22,6 +22,8 @@ extern unsigned char re_encoded_codeword[CODEWORD_LEN];
 extern unsigned char rel_group_seq[MESSAGE_LEN];
 extern unsigned char unrel_group_seq[CODEWORD_LEN - MESSAGE_LEN];
 extern long long chnl_rel_order_idx[CODEWORD_LEN];
+extern long long chnl_rel_max_id[CODEWORD_LEN];
+extern long long chnl_rel_scd_id[CODEWORD_LEN];
 
 extern int chnl_rel_cal(float **input_seq, long long input_len);
 extern int mul_assign();

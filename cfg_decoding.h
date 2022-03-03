@@ -6,7 +6,7 @@
 
 #define SYS_ENC			 1
 
-#define TEST_MODE		 0
+#define TEST_MODE		 1
 
 #define EARLY_TERMINATION		1
 #define EARLY_TERMINATION_NUM	200

@@ -17,6 +17,9 @@ float chnl_rel_matrix[CODEWORD_LEN + 1][CODEWORD_LEN];
 float chnl_rel_matrix_tmp[CODEWORD_LEN + 1][CODEWORD_LEN];
 float chnl_rel_order[CODEWORD_LEN];
 long long chnl_rel_order_idx[CODEWORD_LEN];
+long long chnl_rel_max_id[CODEWORD_LEN];
+long long chnl_rel_scd_id[CODEWORD_LEN];
+
 unsigned char mul_matrix[CODEWORD_LEN + 1][CODEWORD_LEN];
 unsigned char beta_matrix[CODEWORD_LEN + 1][CODEWORD_LEN];
 unsigned char rel_group_seq[MESSAGE_LEN];
@@ -83,6 +86,8 @@ int chnl_rel_seq_order()
 				max_val = chnl_rel_matrix[j][i];
 				max_idx = j;
 			}
+
+			chnl_rel_max_id[i] = max_idx;
 		}
 		for(j = 0; j < (CODEWORD_LEN + 1); j++)
 		{
@@ -92,6 +97,8 @@ int chnl_rel_seq_order()
 				scd_val = chnl_rel_matrix[j][i];
 				scd_idx = j;
 			}
+
+			chnl_rel_scd_id[i] = scd_idx;
 		}
 
 		if(0 == scd_val)
@@ -99,10 +106,12 @@ int chnl_rel_seq_order()
 			scd_val = 0.00001;
 		}
 		chnl_rel[i] = max_val / scd_val;
-		DEBUG_NOTICE("chnl_rel_order: %f %f %f\n",
+		DEBUG_NOTICE("chnl_rel_order: %f %f %f %ld %ld\n",
 		             max_val,
 		             scd_val,
-		             chnl_rel[i]);
+		             chnl_rel[i],
+		             chnl_rel_max_id[i],
+		             chnl_rel_scd_id[i]);
 	}
 
 	memcpy(chnl_rel_order, chnl_rel, sizeof(float) * CODEWORD_LEN);

@@ -76,6 +76,19 @@ unsigned char H_msg[MESSAGE_LEN + 1];
 unsigned char intrplt_seq[CODEWORD_LEN];
 unsigned char uncommon_place[YITA];
 
+/*for un-common element interpolation*/
+long long d_y_num = 0, term_size_p = 0;
+unsigned char **uncommon_seq;//size: yita * (2^yita)
+unsigned char **common_term_c_p;//size: m * (term_size)
+long long *common_term_weight_pol;//size: m
+long long *common_term_weight_pol_1_k_1;//size: m
+long long *common_term_lexorder_pol;//size: m
+unsigned char ***uncommon_term_c_p;//size: (2^yita) * m * (term_size)
+unsigned char ***uncommon_table_c_prev;//size: (2^yita) * m * (term_size)
+long long **uncommon_weight_pol;//size: (2^yita) * m
+long long **uncommon_weight_pol_1_k_1;//size: (2^yita) * m
+long long **uncommon_lexorder_pol;//size: (2^yita) * m
+
 int poly_mul(unsigned char *a,
 				unsigned char *b,
 				unsigned char *product,
@@ -329,6 +342,18 @@ int koetter_interpolation()
 
 	d_x_max = d_x;
 	term_num_real = d_x * d_y;
+
+	/*use for un-common elements interpolation*/
+	d_y_num = d_y_max + 1;
+	term_size_p = term_num_real;
+	common_term_c_p = (unsigned char**)malloc(sizeof(unsigned char*) * d_y_num);
+	for(i = 0; i < d_y_num; i++)
+	{
+		common_term_c_p[i] = (unsigned char*)malloc(sizeof(unsigned char) * term_size_p);
+  	}
+  	common_term_weight_pol = (long long*)malloc(sizeof(long long) * d_y_num);
+  	common_term_weight_pol_1_k_1 = (long long*)malloc(sizeof(long long) * d_y_num);
+  	common_term_lexorder_pol = (long long*)malloc(sizeof(long long) * d_y_num);
 
 	DEBUG_INFO("constraint: %d %d %d %d %d %d %d\n", c, d_x, d_y, term_num_real, d_x_max, d_y_max, TERM_SIZE);
 #if 0
@@ -805,9 +830,14 @@ int koetter_interpolation()
 								}
 								DEBUG_NOTICE("pol_updating_1-k-1: %d %d\n", weight_pol_1_k_1[m], lexorder_pol[m]);
 							}
+
+							/*update for common element*/
+							common_term_weight_pol[m] = weight_pol[m];
+							common_term_weight_pol_1_k_1[m] = weight_pol_1_k_1[m];
+							common_term_lexorder_pol[m] = lexorder_pol[m];
 						}
 					}
-					DEBUG_NOTICE("pol: %d %d %d\n", weight_pol[m], lexorder_pol[m], weight_pol_1_k_1[m]);
+					DEBUG_NOTICE("pol: %d %d %d %d\n", m, weight_pol[m], lexorder_pol[m], weight_pol_1_k_1[m]);
 				}
 				l_w = weight_pol[l_s];
 				l_o = lexorder_pol[l_s];
@@ -818,6 +848,7 @@ int koetter_interpolation()
 					for(n = 0; n < term_num_real; n++)
 					{
 						g_table_c_prev[m][n] = g_table_c[m][n];
+						common_term_c_p[m][n] = g_table_c_prev[m][n];
 #if (1 == CFG_DEBUG_NOTICE)						
 						if(0xFF != g_table_c_prev[m][n])
 						{
@@ -1173,7 +1204,7 @@ int koetter_interpolation()
 	}
 
 	/*free resources*/
-	for (i = 0; i < (d_y_max + 1); i++)
+	for(i = 0; i < (d_y_max + 1); i++)
 	{
   		free(g_table_c[i]);
 		g_table_c[i] = NULL;
@@ -1199,6 +1230,234 @@ int koetter_interpolation()
 	lexorder_pol = NULL;
 	free(tmp_table_c);
 	tmp_table_c = NULL;
+
+	return 0;
+}
+
+int uncommon_interpolation_init()
+{
+	long long i = 0, j = 0, k = 0;
+	long long pow_val = 0, tmp_cnt = 0;
+	unsigned char tmp_flag = 1, tmp_idx = 0;
+
+	pow_val = (long long)(pow(2, YITA));
+
+	/*init un-common elements interpolating points*/
+	uncommon_seq = (unsigned char**)malloc(sizeof(unsigned char*) * YITA);
+	for(i = 0; i < YITA; i++)
+	{
+		uncommon_seq[i] = (unsigned char*)malloc(sizeof(unsigned char) * (pow_val));
+  	}
+	for(i = 0; i < YITA; i++)
+	{
+		tmp_cnt = pow_val / ((long long)(pow(2, (i + 1))));
+		for(j = 0; j < pow_val; j++)
+		{
+			if(0 == (j % (tmp_cnt)))
+			{
+				if(1 == tmp_flag)
+				{
+					tmp_flag = 0;
+				}
+				else
+				{
+					tmp_flag = 1;
+				}
+			}
+			DEBUG_NOTICE("tmp_flag: %ld %ld %ld %ld\n",
+			             i,
+			             j,
+			             tmp_cnt,
+			             tmp_flag);
+
+			if(0 == tmp_flag)
+			{
+				tmp_idx = chnl_rel_max_id[uncommon_place[i]];
+				uncommon_seq[i][j] = power_polynomial_table[tmp_idx + 1][0];
+			}
+			if(1 == tmp_flag)
+			{
+				tmp_idx = chnl_rel_scd_id[uncommon_place[i]];
+				uncommon_seq[i][j] = power_polynomial_table[tmp_idx + 1][0];
+			}
+
+			DEBUG_NOTICE("uncommon_seq: %ld %ld %ld %ld %ld\n",
+			             i,
+			             j,
+			             uncommon_place[YITA - 1 - i],
+			             tmp_idx,
+			             uncommon_seq[i][j]);
+		}
+	}
+
+	/*init un-common elements interpolating Q*/
+	uncommon_term_c_p = (unsigned char***)malloc(sizeof(unsigned char**) * pow_val);
+	for (i = 0; i < pow_val; i++)
+	{
+  		uncommon_term_c_p[i] = (unsigned char**)malloc(sizeof(unsigned char*) * d_y_num);
+
+		for(j = 0; j < d_y_num; j++)
+		{
+			uncommon_term_c_p[i][j] = (unsigned char*)malloc(sizeof(unsigned char) * term_size_p);
+		}
+  	}
+  	for(i = 0; i < pow_val; i++)
+  	{
+  		for(j = 0; j < d_y_num; j++)
+  		{
+  			memcpy(uncommon_term_c_p[i][j], common_term_c_p[j], sizeof(unsigned char) * term_size_p);
+  		}
+  	}
+  	for(i = 0; i < pow_val; i++)
+  	{
+  		for(j = 0; j < d_y_num; j++)
+  		{
+  			for(k = 0; k < term_size_p; k++)
+  			{
+  				if(0xFF != uncommon_term_c_p[i][j][k])
+  				{
+  					DEBUG_NOTICE("uncommon_term_c_p: %ld %ld %ld %x\n",
+  					             i,
+  					             j,
+  					             k,
+  					             uncommon_term_c_p[i][j][k]);
+  				}
+  			}
+  		}
+  	}
+  	
+  	/*init un-common elements interpolating Q for storage*/
+  	uncommon_table_c_prev = (unsigned char***)malloc(sizeof(unsigned char**) * pow_val);
+	for (i = 0; i < pow_val; i++)
+	{
+  		uncommon_table_c_prev[i] = (unsigned char**)malloc(sizeof(unsigned char*) * d_y_num);
+
+		for(j = 0; j < d_y_num; j++)
+		{
+			uncommon_table_c_prev[i][j] = (unsigned char*)malloc(sizeof(unsigned char) * term_size_p);
+		}
+  	}
+  	for(i = 0; i < pow_val; i++)
+  	{
+  		for(j = 0; j < d_y_num; j++)
+  		{
+  			memset(uncommon_table_c_prev[i][j], 0xFF, sizeof(unsigned char) * term_size_p);
+  		}
+  	}
+
+	/*init weight_pol*/
+	uncommon_weight_pol = (long long**)malloc(sizeof(long long*) * pow_val);
+	uncommon_weight_pol_1_k_1 = (long long**)malloc(sizeof(long long*) * pow_val);
+	uncommon_lexorder_pol = (long long**)malloc(sizeof(long long*) * pow_val);
+	for(i = 0; i < pow_val; i++)
+	{
+		uncommon_weight_pol[i] = (long long*)malloc(sizeof(long long) * d_y_num);
+		uncommon_weight_pol_1_k_1[i] = (long long*)malloc(sizeof(long long) * d_y_num);
+		uncommon_lexorder_pol[i] = (long long*)malloc(sizeof(long long) * d_y_num);
+  	}
+  	for(i = 0; i < pow_val; i++)
+  	{
+  		memcpy(uncommon_weight_pol[i], common_term_weight_pol, sizeof(long long) * d_y_num);
+  		memcpy(uncommon_weight_pol_1_k_1[i], common_term_weight_pol_1_k_1, sizeof(long long) * d_y_num);
+  		memcpy(uncommon_lexorder_pol[i], common_term_lexorder_pol, sizeof(long long) * d_y_num);
+  	}
+  	for(i = 0; i < pow_val; i++)
+  	{
+  		for(j = 0; j < d_y_num; j++)
+  		{
+  			DEBUG_NOTICE("uncommon_weight: %ld %ld %ld %ld %ld\n",
+  			             i,
+  			             j,
+  			             uncommon_weight_pol[i][j],
+  			             uncommon_weight_pol_1_k_1[i][j],
+  			             uncommon_lexorder_pol[i][j]);
+  		}
+  	}
+	
+	return 0;
+}
+
+int uncommon_interpolation()
+{
+	long long i = 0, j = 0;
+
+	
+	
+	return 0;
+}
+
+int uncommon_interpolation_exit()
+{
+	long long i = 0, j = 0;
+	long long pow_val = (long long)(pow(2, YITA));
+
+	for(i = 0; i < YITA; i++)
+	{
+		free(uncommon_seq[i]);
+		uncommon_seq[i] = NULL;
+	}
+	free(uncommon_seq);
+
+	for(i = 0; i < d_y_num; i++)
+	{
+		free(common_term_c_p[i]);
+		common_term_c_p[i] = NULL;
+	}
+	free(common_term_c_p);
+
+	for (i = 0; i < pow_val; i++)
+	{
+		for(j = 0; j < d_y_num; j++)
+		{
+			free(uncommon_term_c_p[i][j]);
+			uncommon_term_c_p[i][j] = NULL;;
+		}
+
+		free(uncommon_term_c_p[i]);
+		uncommon_term_c_p[i] = NULL;
+	}
+	free(uncommon_term_c_p);
+	uncommon_term_c_p = NULL;
+
+	for (i = 0; i < pow_val; i++)
+	{
+		for(j = 0; j < d_y_num; j++)
+		{
+			free(uncommon_table_c_prev[i][j]);
+			uncommon_table_c_prev[i][j] = NULL;;
+		}
+
+		free(uncommon_table_c_prev[i]);
+		uncommon_table_c_prev[i] = NULL;
+	}
+	free(uncommon_table_c_prev);
+	uncommon_table_c_prev = NULL;
+
+	for(i = 0; i < pow_val; i++)
+	{
+		free(uncommon_weight_pol[i]);
+		uncommon_weight_pol[i] = NULL;
+	}
+	free(uncommon_weight_pol);
+	for(i = 0; i < pow_val; i++)
+	{
+		free(uncommon_weight_pol_1_k_1[i]);
+		uncommon_weight_pol_1_k_1[i] = NULL;
+	}
+	free(uncommon_weight_pol_1_k_1);
+	for(i = 0; i < pow_val; i++)
+	{
+		free(uncommon_lexorder_pol[i]);
+		uncommon_lexorder_pol[i] = NULL;
+	}
+	free(uncommon_lexorder_pol);
+
+	free(common_term_weight_pol);
+	common_term_weight_pol = NULL;
+	free(common_term_weight_pol_1_k_1);
+	common_term_weight_pol_1_k_1 = NULL;
+	free(common_term_lexorder_pol);
+	common_term_lexorder_pol = NULL;
 
 	return 0;
 }
@@ -1276,7 +1535,6 @@ int g_term_destroy()
 		free(g_term_c_p[i]);
 		g_term_c_p[i] = NULL;
 	}
-
 	free(g_term_c_p);
 	g_term_c_p = NULL;
 
@@ -3245,6 +3503,8 @@ int as_decoding()
 	uncommon_place_init();
 	intrplt_seq_init();
 	koetter_interpolation();
+	uncommon_interpolation_init();
+	uncommon_interpolation_exit();
 
 	stop = clock();
 	runtime = (stop - start) / 1000.0000;
