@@ -60,7 +60,7 @@ void main()
 
 	/*input simulation parameters*/
 	float eb2n0_start = 6, eb2n0_stop = 6, eb2n0_step = 1, eb2n0 = 6;
-	unsigned long iter_cnt = 1, monitor_cnt = 1;
+	unsigned long iter_cnt = 100, monitor_cnt = 1;
 #if (0 == TEST_MODE)
 #if 1
 	printf("Please Input Eb/N0 Start: ");
@@ -79,11 +79,11 @@ void main()
 #if (1 == OUTPUT_LOG)
 	/*init file log*/
 	char log_name[255];
-	sprintf(log_name, "n_%d-k_%d-m_%d-ret_%d-snr_%f_%f_%f-cnt_%ld_%ld.txt",
+	sprintf(log_name, "n_%d-k_%d-m_%d-yita_%d-snr_%f_%f_%f-cnt_%ld_%ld.txt",
 					  CODEWORD_LEN,
 					  MESSAGE_LEN,
 					  S_MUL,
-					  RE_ENCODING,
+					  YITA,
 					  eb2n0_start,
 					  eb2n0_step,
 					  eb2n0_stop,
@@ -160,6 +160,10 @@ void main()
 			DEBUG_IMPOTANT("Transmission over Channel:\n");
 			for(i = 0; i < symbol_num; i++)
 			{
+				if(0 == (i % GF_Q))
+				{
+					DEBUG_NOTICE("---------------\n");
+				}
 				recv_seq[i][0] = recv_seq[i][0] + awgn_gen(eb2n0);
 				recv_seq[i][1] = recv_seq[i][1] + awgn_gen(eb2n0);
 				DEBUG_NOTICE("%f %f\n", recv_seq[i][0], recv_seq[i][1]);
@@ -180,10 +184,10 @@ void main()
 				received_polynomial[i] = gf_add(encoded_polynomial[i], error_polynomial[i]);
 			}
 #else
-			memcpy(received_polynomial, encoded_polynomial, sizeof(unsigned char) * CODEWORD_LEN);
+			//memcpy(received_polynomial, encoded_polynomial, sizeof(unsigned char) * CODEWORD_LEN);
 			//received_polynomial[0] = gf_add(encoded_polynomial[0], 0x1);
 			//received_polynomial[3] = gf_add(encoded_polynomial[3], 0x1);
-			received_polynomial[4] = gf_add(encoded_polynomial[4], 0x2);
+			//received_polynomial[4] = gf_add(encoded_polynomial[4], 0x2);
 			//received_polynomial[5] = gf_add(encoded_polynomial[5], 0x0);
 			//received_polynomial[9] = gf_add(encoded_polynomial[9], 0x2);
 			//received_polynomial[0] = 0x5;
@@ -309,6 +313,8 @@ void main()
 							uncoded_symbol_err - symbol_err_prev);
 #endif
 
+#if 0
+
 #if (1 == RE_ENCODING)
 
 					for(i = 0; i < MESSAGE_LEN; i++)
@@ -348,6 +354,9 @@ void main()
 						fprintf(frc, "unrel_group_seq: %d\n", unrel_group_seq[i]);
 #endif
 					}
+					
+#endif					
+					
 #if (1 == OUTPUT_LOG)
 					fclose(frc);
 					frc = NULL;

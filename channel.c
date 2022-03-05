@@ -34,8 +34,8 @@ float awgn_gen(float eb2n0_snr)
 	val = val * sqrt((E_B / ((float)MESSAGE_LEN / (float)CODEWORD_LEN)) / pow(10.0, (float)(eb2n0) / 10.0) / 2);
 	
 #endif
-	DEBUG_NOTICE("val: %f %f %f\n", r, w, val);
-	DEBUG_NOTICE("gauss_val: %f\n", val);
+	//DEBUG_NOTICE("val: %f %f %f\n", r, w, val);
+	//DEBUG_NOTICE("gauss_val: %f\n", val);
 
 #if 0
 #if (1 == OUTPUT_LOG)
