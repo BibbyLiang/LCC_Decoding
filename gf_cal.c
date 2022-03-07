@@ -381,6 +381,8 @@ unsigned char power_polynomial_table[GF_FIELD][2] =
 #endif
 
 #if (1 == GF_CAL_COUNT)
+unsigned char cnt_switch = 0;
+
 long long add_cnt = 0;
 long long mul_cnt = 0;
 long long div_cnt = 0;
@@ -451,8 +453,11 @@ unsigned char gf_location(unsigned char val)
 
 unsigned char gf_add(unsigned char a, unsigned char b)
 {
-#if (1 == GF_CAL_COUNT)	
-	add_cnt++;
+#if (1 == GF_CAL_COUNT)
+	if(1 == cnt_switch)
+	{
+		add_cnt++;
+	}
 #endif
 	unsigned char i = 0;
 	unsigned char sum_in_pow = 0;
@@ -471,8 +476,11 @@ unsigned char gf_add(unsigned char a, unsigned char b)
 
 unsigned char gf_multp(unsigned char a, unsigned char b)
 {
-#if (1 == GF_CAL_COUNT)	
-	mul_cnt++;
+#if (1 == GF_CAL_COUNT)
+	if(1 == cnt_switch)
+	{
+		mul_cnt++;
+	}
 #endif	
 	if((0xFF == a) || (0xFF == b))
 	{
@@ -496,7 +504,10 @@ unsigned char gf_div(unsigned char a, unsigned char b)
 		return 0xFF;
 	}
 #if (1 == GF_CAL_COUNT)
-	div_cnt++;
+	if(1 == cnt_switch)
+	{
+		div_cnt++;
+	}
 #endif
 	//DEBUG_NOTICE("div: %x %x\n", a, b);
 	unsigned char quotient_in_pow = 0;
@@ -707,7 +718,10 @@ int gf_multp_poly_hw(unsigned char* a, unsigned char len_a,
 long long real_combine(long long n, long long k)
 {
 #if (1 == GF_CAL_COUNT)	
-	real_cbm_cnt++;
+	if(1 == cnt_switch)
+	{
+		real_cbm_cnt++;
+	}
 #endif
 	long long combine_num = 0;
 
@@ -747,8 +761,11 @@ long long real_combine(long long n, long long k)
 
 unsigned char gf_real_mutp_ff(long long n, unsigned char ff)
 {
-#if (1 == GF_CAL_COUNT)	
-	real_mul_ff_cnt++;
+#if (1 == GF_CAL_COUNT)
+	if(1 == cnt_switch)
+	{
+		real_mul_ff_cnt++;
+	}
 #endif
 	unsigned char val = 0xFF;
 
@@ -766,8 +783,11 @@ unsigned char gf_real_mutp_ff(long long n, unsigned char ff)
 
 unsigned char gf_pow_cal(unsigned char ff, long long n)
 {
-#if (1 == GF_CAL_COUNT) 	
-	pow_cnt++;
+#if (1 == GF_CAL_COUNT)
+	if(1 == cnt_switch)
+	{
+		pow_cnt++;
+	}
 #endif	
 	unsigned char val = 0xFF;
 	if(0xFF == ff)
@@ -841,46 +861,7 @@ int gf_count_hist(long long err_cnt)
 	real_cbm_cnt_prev = real_cbm_cnt;
 	real_mul_ff_cnt_prev = real_mul_ff_cnt;
 	pow_cnt_prev = pow_cnt;
-	
+
 	return 0;
 }
 #endif
-
-void BubbleSort4(float *A, int len, long long *A_idx)
-{
-    int low = 0, high = len - 1;
-    int i = 0;
-    float tmp = 0;
-
-    while(low < high)
-    {
-        for(i = low; i < high; i++)  // 正向冒泡,找到最大者
-        {
-            if(A[i] > A[i + 1])
-            {
-                tmp = A[i];
-                A[i] = A[i + 1];
-                A[i + 1] = tmp;
-
-                tmp = A_idx[i];
-                A_idx[i] = A_idx[i + 1];
-                A_idx[i + 1] = tmp;
-            }
-        }
-        high--;            // 修改high值, 前移一位 
-        for(i = high; i > low; i--)     // 反向冒泡,找到最小者 
-        {
-            if(A[i] < A[i - 1])
-            {
-                tmp = A[i];
-                A[i] = A[i - 1];
-                A[i - 1] = tmp;
-
-                tmp = A_idx[i];
-                A_idx[i] = A_idx[i - 1];
-                A_idx[i - 1] = tmp;
-            }
-        }
-        low++;            // 修改low值,后移一位
-    }
-}
