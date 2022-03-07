@@ -30,7 +30,7 @@
 
 #define S_MUL					1
 #define LEX_TABLE_EXPAND_SIZE	4
-#define YITA					1
+#define YITA					4
 
 #if (1 == RE_ENCODING)
 #define Y_WEIGHT				(-1)

@@ -865,3 +865,42 @@ int gf_count_hist(long long err_cnt)
 	return 0;
 }
 #endif
+
+void BubbleSort4(float *A, int len, long long *A_idx)
+{
+    int low = 0, high = len - 1;
+    int i = 0;
+    float tmp = 0;
+
+    while(low < high)
+    {
+        for(i = low; i < high; i++)  // 正向冒泡,找到最大者
+        {
+            if(A[i] > A[i + 1])
+            {
+                tmp = A[i];
+                A[i] = A[i + 1];
+                A[i + 1] = tmp;
+
+                tmp = A_idx[i];
+                A_idx[i] = A_idx[i + 1];
+                A_idx[i + 1] = tmp;
+            }
+        }
+        high--;            // 修改high值, 前移一位 
+        for(i = high; i > low; i--)     // 反向冒泡,找到最小者 
+        {
+            if(A[i] < A[i - 1])
+            {
+                tmp = A[i];
+                A[i] = A[i - 1];
+                A[i - 1] = tmp;
+
+                tmp = A_idx[i];
+                A_idx[i] = A_idx[i - 1];
+                A_idx[i - 1] = tmp;
+            }
+        }
+        low++;            // 修改low值,后移一位
+    }
+}

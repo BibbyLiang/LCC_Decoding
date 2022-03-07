@@ -72,4 +72,6 @@ extern unsigned char phase_trans(unsigned char phase);
 #if (1 == GF_CAL_COUNT)
 extern int gf_count_hist(long long err_cnt);
 #endif
+
+extern void BubbleSort4(float *A, int len, long long *A_idx);
 #endif
