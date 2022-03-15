@@ -2,7 +2,7 @@
 #define CFG_DECODING_H
 
 #define GF_Q			 8
-#define GF_CAL_COUNT	 0
+#define GF_CAL_COUNT	 1
 
 #define SYS_ENC			 1
 
@@ -10,7 +10,7 @@
 
 #define EARLY_TERMINATION		1
 #define EARLY_TERMINATION_NUM	100
-#define OUTPUT_LOG				1
+#define OUTPUT_LOG				0
 
 #define RELEX_ORDER				1
 #define SIMPLE_ASD				0
@@ -25,7 +25,7 @@
 #define DYNAMIC_TERM_Y			10/9
 #endif
 #if (1 == RE_ENCODING)
-#define SYN_LEN		(MESSAGE_LEN / 2 * 2)//need to be checked
+#define SYN_LEN		(MESSAGE_LEN / 30 * 2)//need to be checked
 #endif
 
 #define S_MUL					1
@@ -53,6 +53,6 @@
 #if (0 == RE_ENCODING)
 #define CFG_RR_MODE			0
 #else
-#define CFG_RR_MODE			FAST_RR_M1
+#define CFG_RR_MODE			BMA_RR
 #endif
 #endif

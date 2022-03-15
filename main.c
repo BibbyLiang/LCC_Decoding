@@ -59,8 +59,8 @@ void main()
 	float runtime;
 
 	/*input simulation parameters*/
-	float eb2n0_start = 6, eb2n0_stop = 6, eb2n0_step = 1, eb2n0 = 6;
-	unsigned long iter_cnt = 100, monitor_cnt = 1;
+	float eb2n0_start = 5.5, eb2n0_stop = 5.5, eb2n0_step = 1, eb2n0 = 5.5;
+	unsigned long iter_cnt = 1, monitor_cnt = 1;
 #if (0 == TEST_MODE)
 #if 1
 	printf("Please Input Eb/N0 Start: ");
@@ -196,7 +196,7 @@ void main()
 			//received_polynomial[3] = 0x0;
 			//received_polynomial[4] = 0x1;
 			//received_polynomial[5] = 0x1;
-			//received_polynomial[6] = 0x3;
+			//received_polynomial[6] = 0x0;
 #endif
 #endif
 
@@ -235,12 +235,16 @@ void main()
 
 			/*nultiplicity assignment*/
 			mul_assign();
-
+			
+			gf_count_switch(1);
+			
 			/*re-encoding transform*/
 			re_encoding();
 
 			/*GS decoding*/
 			as_decoding();
+			
+			gf_count_switch(0);
 
 #if (1 == GF_CAL_COUNT)
 			/*count gf field calculating complexity*/

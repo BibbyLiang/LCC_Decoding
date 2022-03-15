@@ -17,7 +17,8 @@
 #endif
 #if (8 == GF_Q)
 #define GF_FIELD        256
-#define MESSAGE_LEN     239
+//#define MESSAGE_LEN     239
+#define MESSAGE_LEN     223
 #endif
 #define CODEWORD_LEN    (GF_FIELD - 1)   
 
@@ -72,6 +73,6 @@ extern unsigned char phase_trans(unsigned char phase);
 #if (1 == GF_CAL_COUNT)
 extern int gf_count_hist(long long err_cnt);
 #endif
-
+extern void gf_count_switch(unsigned char count_switch);
 extern void BubbleSort4(float *A, int len, long long *A_idx);
 #endif

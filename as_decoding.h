@@ -36,6 +36,11 @@ extern long long max_dx, max_dy;
 extern long long term_size_x, term_size_y;
 extern unsigned char ***g_term_c_p;
 
+extern unsigned char *g_term_c_expand;
+extern unsigned char *tmp_g_term_c_expand;
+extern unsigned char *mul_g_term_c_expand;
+extern unsigned char *g_term_c_expand_store;
+
 extern int as_decoding();
 extern int g_term_malloc();
 extern int g_term_destroy();
@@ -48,5 +53,19 @@ extern long long hamm_distance_code_cal(unsigned char *a,
 extern long long hamm_distance_bit_cal(unsigned char *a,
 									  			  unsigned char *b,
 									  			  long long len);
+#if (1 == RE_ENCODING)
+#if (CFG_RR_MODE == BMA_RR)
+extern int uncommon_dfs_rr_recur(unsigned char *g_c_q,
+								  unsigned char *g_c_0_y,
+								  long long m,
+								  long long l);
+extern int uncommon_check_rr_decoded_result_recur(unsigned char *msg,
+														 long long l);								  
+#endif
+#endif
+
+extern int chien_searching_for_g_0_y_recur(unsigned char *g_c_in, unsigned char root_test);
+extern int g_term_0_y_cal_recur(unsigned char *g_c_in, unsigned char *g_c_out);
+extern int g_term_new_gen_recur(unsigned char *g_c_in, unsigned char root_insert);
 
 #endif

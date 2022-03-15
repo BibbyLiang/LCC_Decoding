@@ -459,6 +459,16 @@ unsigned char gf_add(unsigned char a, unsigned char b)
 		add_cnt++;
 	}
 #endif
+
+	if(0xFF == a)
+	{
+		return b;
+	}
+	if(0xFF == b)
+	{
+		return a;
+	}
+
 	unsigned char i = 0;
 	unsigned char sum_in_pow = 0;
 	
@@ -481,11 +491,22 @@ unsigned char gf_multp(unsigned char a, unsigned char b)
 	{
 		mul_cnt++;
 	}
-#endif	
+#endif
+
 	if((0xFF == a) || (0xFF == b))
 	{
 		return 0xFF;
 	}
+
+	if(0x0 == a)
+	{
+		return b;
+	}
+	
+	if(0x0 == b)
+	{
+		return a;
+	}	
 
 	unsigned char product_in_pow = (a + b) % (GF_FIELD - 1);
 
@@ -865,6 +886,13 @@ int gf_count_hist(long long err_cnt)
 	return 0;
 }
 #endif
+
+void gf_count_switch(unsigned char count_switch)
+{
+#if (1 == GF_CAL_COUNT)	
+	cnt_switch = count_switch;
+#endif
+}
 
 void BubbleSort4(float *A, int len, long long *A_idx)
 {

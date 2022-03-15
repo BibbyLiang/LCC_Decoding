@@ -16,6 +16,7 @@ extern unsigned char sigma[((CODEWORD_LEN - MESSAGE_LEN) + (CODEWORD_LEN - MESSA
 extern unsigned char erasure_polynomial[CODEWORD_LEN];
 extern unsigned char phi[CODEWORD_LEN];
 extern unsigned char v[MESSAGE_LEN + 1];
+extern unsigned char g_v_val[CODEWORD_LEN];
 #if (1 == RE_ENCODING)
 extern unsigned char re_encoded_codeword[CODEWORD_LEN];
 #endif
@@ -34,5 +35,6 @@ extern int bm_re_encoding(unsigned char *msg_phi, unsigned char *tmp_cw);
 extern int re_encoding();
 extern int recover_codeword();
 extern int chnl_rel_seq_order();
+extern int erasure_decoding(unsigned char *r_seq);
 
 #endif
