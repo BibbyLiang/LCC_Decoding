@@ -75,4 +75,5 @@ extern int gf_count_hist(long long err_cnt);
 #endif
 extern void gf_count_switch(unsigned char count_switch);
 extern void BubbleSort4(float *A, int len, long long *A_idx);
+extern void gf_count_reset();
 #endif

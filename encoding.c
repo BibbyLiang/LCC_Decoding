@@ -2,6 +2,7 @@
 #include <string.h>
 #include "debug_info.h"
 #include "gf_cal.h"
+#include "mod.h"
 #include "encoding.h"
 
 #if (3 == GF_Q)
@@ -284,6 +285,16 @@ unsigned char error_polynomial[CODEWORD_LEN] =
 	0xFF
 };
 
+unsigned char received_polynomial[CODEWORD_LEN] =
+{
+	0xFF,
+	0xFF,
+	0xFF,
+	0xFF,
+	0xFF,
+	0xFF,
+	0xFF
+};
 unsigned char evaluation_encoding()
 {
 	long long i = 0, j = 0;
@@ -589,4 +600,92 @@ void encoding2()
 	}
 
 	memcpy(encoded_polynomial, cwd, sizeof(unsigned char) * CODEWORD_LEN);
+}
+
+void encoding3(unsigned char *msg, unsigned char *cwd)
+{
+    int i, j, k;
+	unsigned char tmp = 0xFF;
+#if 0
+	unsigned char msg[MESSAGE_LEN];
+	memcpy(msg, message_polynomial, sizeof(unsigned char) * MESSAGE_LEN);
+	unsigned char cwd[CODEWORD_LEN];
+	memset(cwd, 0xFF, sizeof(unsigned char) * CODEWORD_LEN);
+#endif
+
+	unsigned char Quotient[MESSAGE_LEN] = { 0 };
+    unsigned char gx1[CODEWORD_LEN - MESSAGE_LEN + 1];
+    for (i = 0; i < (CODEWORD_LEN - MESSAGE_LEN + 1); i++)//n-k+1 denote the numbers of term (generator polynomial)
+    {
+        gx1[i] = gf_div(0x0, generator_polynomial[i]);
+		//printf("gx1_tmp: %d\n", gx1[i]);
+		//gx1[i] = gf_pow2poly(gx1[i]);
+		//printf("gx1: %d %d %d %d\n", generator_polynomial[i], tmp, i, gx1[i]);
+    }
+    for (i = 0; i < MESSAGE_LEN; i++)
+        cwd[i] = msg[i];
+    for (i = MESSAGE_LEN; i < CODEWORD_LEN; i++)
+        cwd[i] = 0xFF;
+    for (j = 0; j < MESSAGE_LEN; j++)//find the remainder (long division)
+    {
+        Quotient[j] = gf_multp(cwd[j], gx1[0]);
+		//DEBUG_NOTICE("Quotient: %d = %d * %d\n", gf_pow2poly(Quotient[j]), gf_pow2poly(cwd[j]), gf_pow2poly(gx1[0]));
+        for (i = j; i < (CODEWORD_LEN - MESSAGE_LEN + 1 + j); i++)
+        {
+			tmp = cwd[i];
+            cwd[i] = gf_add(cwd[i], gf_multp(Quotient[j], (generator_polynomial[i - j])));
+			//DEBUG_NOTICE("cwd[i]: %d %d %d %d\n", gf_pow2poly(cwd[i]), gf_pow2poly(tmp), gf_pow2poly(Quotient[j]), gf_pow2poly(generator_polynomial[i - j]));
+        }
+    }
+
+    for (i = 0; i < (CODEWORD_LEN - MESSAGE_LEN); i++)
+    {
+        cwd[i] = cwd[MESSAGE_LEN + i];
+    }
+    for (i = (CODEWORD_LEN - MESSAGE_LEN); i < CODEWORD_LEN; i++)
+        cwd[i] = msg[i - CODEWORD_LEN + MESSAGE_LEN];
+
+#if 0
+	for(i = 0; i < MESSAGE_LEN; i++)
+	{
+		DEBUG_NOTICE("msg: %d | %d %d\n", i, message_polynomial[i], gf_pow2poly(message_polynomial[i]));
+	}
+	for(i = 0; i < CODEWORD_LEN; i++)
+	{
+		DEBUG_NOTICE("cwd: %d | %d %d\n", i, cwd[i], gf_pow2poly(cwd[i]));
+	}
+
+	memcpy(encoded_polynomial, cwd, sizeof(unsigned char) * CODEWORD_LEN);
+#endif
+}
+
+int shorten_msg(long long msg_len, long long shrt_len)
+{
+	long long i = 0, j = 0;
+
+	for(i = (msg_len - shrt_len); i < msg_len; i++)
+	{
+		message_polynomial[i] = 0xFF;
+	}
+	
+	return 0;
+}
+
+int shorten_trans(long long cwd_len, long long shrt_len)
+{
+	long long i = 0, j = 0;
+
+	for(i = (cwd_len - shrt_len); i < cwd_len; i++)
+	{
+		encoded_polynomial[i] = 0xFF;
+		received_polynomial[i] = 0xFF;
+		
+		for(j = 0; j < GF_Q; j++)
+		{
+			recv_seq[i * GF_Q + j][0] = 1.0;
+			recv_seq[i * GF_Q + j][1] = 0.0;
+		}
+	}
+	
+	return 0;
 }

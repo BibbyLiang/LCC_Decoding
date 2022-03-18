@@ -61,6 +61,7 @@ int bpsk_mod(unsigned char *input_seq,
 			{
 				tmp_input = (power_polynomial_table[input_seq[i] + 0x1][1] >> j) & 0x1;
 			}
+			/*0 -> 1, 1 -> -1*/
 			output_seq[k][0] = 1 - (float)(2 * tmp_input);
 			output_seq[k][1] = 0.0;
 

@@ -885,6 +885,24 @@ int gf_count_hist(long long err_cnt)
 
 	return 0;
 }
+
+void gf_count_reset()
+{
+	add_cnt = 0;
+	mul_cnt = 0;
+	div_cnt = 0;
+	real_cbm_cnt = 0;
+	real_mul_ff_cnt = 0;
+	pow_cnt = 0;
+	add_cnt_prev = 0;
+	mul_cnt_prev = 0;
+	div_cnt_prev = 0;
+	real_cbm_cnt_prev = 0;
+	real_mul_ff_cnt_prev = 0;
+	pow_cnt_prev = 0;
+
+	return;
+}
 #endif
 
 void gf_count_switch(unsigned char count_switch)

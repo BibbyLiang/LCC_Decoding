@@ -623,7 +623,7 @@ int l_cal(unsigned char locator_j, unsigned char *L)
 	return 0;
 }
 
-int tao_cal()
+int tao_cal(unsigned char *erasure_group)
 {
 	long long i = 0, j = 0;
 	memset(tao, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN - MESSAGE_LEN + 1));
@@ -649,11 +649,11 @@ int tao_cal()
 	}
 #else
 	reg[0] = 0;
-	reg[1] = unrel_group_seq[0];
+	reg[1] = erasure_group[0];
 	for(i = 1; i < (CODEWORD_LEN - MESSAGE_LEN); i++)
 	{
 		a[0] = 0;
-		a[1] = unrel_group_seq[i];
+		a[1] = erasure_group[i];
 		memcpy(b, reg, sizeof(unsigned char) * (1 + i));
 		gf_multp_poly_hw(a, 2,
 						  b, (1 + i),
@@ -777,7 +777,7 @@ int phi_cal()
 				  syndrome,
 				  CODEWORD_LEN,
 				  MESSAGE_LEN);
-	tao_cal();
+	tao_cal(unrel_group_seq);
 	sigma_cal();
 
 	for(i = 0; i < (CODEWORD_LEN - MESSAGE_LEN); i++)
@@ -933,7 +933,7 @@ unsigned char coordinate_trans(unsigned char locator, unsigned char r, unsigned 
 	return coordinate;
 }
 
-int erasure_decoding(unsigned char *r_seq)
+int erasure_decoding(unsigned char *r_seq, unsigned char *erasure_group)
 {
 	long long i = 0, j = 0, k = 0, l = 0;
 	unsigned char find_flag = 0;
@@ -950,7 +950,7 @@ int erasure_decoding(unsigned char *r_seq)
 	{
 		for(k = 0; k < (CODEWORD_LEN - MESSAGE_LEN); k++)
 		{
-			if(unrel_group_seq[k] == i)
+			if(erasure_group[k] == i)
 			{
 				find_flag = 1;
 				break;
@@ -971,7 +971,7 @@ int erasure_decoding(unsigned char *r_seq)
 	
 	syndrome_cal(erasure_polynomial, syndrome,
 				  CODEWORD_LEN, MESSAGE_LEN);
-	tao_cal();
+	tao_cal(erasure_group);
 	sigma_cal();
 
 	for(i = 0; i < (CODEWORD_LEN - MESSAGE_LEN); i++)
@@ -999,7 +999,7 @@ int erasure_decoding(unsigned char *r_seq)
 	{
 		for(k = 0; k < (CODEWORD_LEN - MESSAGE_LEN); k++)
 		{
-			if(unrel_group_seq[k] == i)
+			if(erasure_group[k] == i)
 			{
 				find_flag = 1;
 				break;
@@ -1027,6 +1027,7 @@ int erasure_decoding(unsigned char *r_seq)
 		}
 		else
 		{
+			DEBUG_NOTICE("cal: %d | %x\n", i, r_seq[i]);
 			phi[i] = r_seq[i];
 		}
 	}
@@ -1432,7 +1433,7 @@ int recover_codeword()
 	{
 		DEBUG_NOTICE("decoded_codeword: %x\n", decoded_codeword[i]);
 	}
-	erasure_decoding(decoded_codeword);
+	erasure_decoding(decoded_codeword, unrel_group_seq);
 	memcpy(decoded_codeword, phi, sizeof(unsigned char) * CODEWORD_LEN);
 	memcpy(decoded_message, decoded_codeword + (CODEWORD_LEN - MESSAGE_LEN), sizeof(unsigned char) * MESSAGE_LEN);
 

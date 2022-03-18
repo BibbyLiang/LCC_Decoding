@@ -29,12 +29,12 @@ extern long long chnl_rel_scd_id[CODEWORD_LEN];
 extern int chnl_rel_cal(float **input_seq, long long input_len);
 extern int mul_assign();
 extern int l_cal(unsigned char locator_j, unsigned char *L);
-extern int tao_cal();
+extern int tao_cal(unsigned char *erasure_group);
 extern unsigned char poly_eva(unsigned char *poly, long long poly_len, unsigned char input_val);
 extern int bm_re_encoding(unsigned char *msg_phi, unsigned char *tmp_cw);
 extern int re_encoding();
 extern int recover_codeword();
 extern int chnl_rel_seq_order();
-extern int erasure_decoding(unsigned char *r_seq);
+extern int erasure_decoding(unsigned char *r_seq, unsigned char *erasure_group);
 
 #endif

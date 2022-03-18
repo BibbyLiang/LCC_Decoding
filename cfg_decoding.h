@@ -25,12 +25,15 @@
 #define DYNAMIC_TERM_Y			10/9
 #endif
 #if (1 == RE_ENCODING)
-#define SYN_LEN		(MESSAGE_LEN / 30 * 2)//need to be checked
+#define SYN_LEN		(MESSAGE_LEN * 2 / 14)//need to be checked
 #endif
+#define CFG_FAST_SKIP_TST_VCT	1
 
 #define S_MUL					1
 #define LEX_TABLE_EXPAND_SIZE	4
-#define YITA					4
+#define YITA					8
+
+#define SHORTEN_LEN				7
 
 #if (1 == RE_ENCODING)
 #define Y_WEIGHT				(-1)

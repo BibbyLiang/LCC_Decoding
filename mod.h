@@ -19,5 +19,4 @@ extern int bpsk_demod(float **input_seq,
 				    		unsigned int input_len,
 				    		unsigned char *output_seq,
 				    		unsigned int output_len);
-
 #endif

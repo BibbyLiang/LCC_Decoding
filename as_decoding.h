@@ -22,7 +22,6 @@
 #define ROOT_SIZE				1
 #endif
 
-extern unsigned char received_polynomial[CODEWORD_LEN];
 extern unsigned char output_polynomial[CODEWORD_LEN];
 extern unsigned char decoded_codeword[CODEWORD_LEN];
 extern unsigned char decoded_message[MESSAGE_LEN];
@@ -67,5 +66,6 @@ extern int uncommon_check_rr_decoded_result_recur(unsigned char *msg,
 extern int chien_searching_for_g_0_y_recur(unsigned char *g_c_in, unsigned char root_test);
 extern int g_term_0_y_cal_recur(unsigned char *g_c_in, unsigned char *g_c_out);
 extern int g_term_new_gen_recur(unsigned char *g_c_in, unsigned char root_insert);
+extern int fast_check_tst_vct_radius(long long dcd_cwd_idx, long long tst_vct_idx);
 
 #endif

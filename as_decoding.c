@@ -14,17 +14,6 @@
 
 #define JUN_MA_EXAMPLE	0
 
-unsigned char received_polynomial[CODEWORD_LEN] =
-{
-	0xFF,
-	0xFF,
-	0xFF,
-	0xFF,
-	0xFF,
-	0xFF,
-	0xFF
-};
-
 unsigned char output_polynomial[CODEWORD_LEN] =
 {
 	0xFF,
@@ -95,6 +84,7 @@ long long *uncommon_l_s, *uncommon_l_o, *uncommon_l_w;//size: (2^yita)
 unsigned char **uncommon_term_c_choose;//size: (2^yita) *(term_size)
 unsigned char **uncommon_decoded_codeword;//size: (2^yita) * codewordlen
 unsigned char **uncommon_decoded_message;
+unsigned char **tst_vct;//size: (2^yita) * codewordlen
 
 unsigned char first_tmp_message[MESSAGE_LEN];
 
@@ -1434,25 +1424,54 @@ int uncommon_interpolation_init()
 		memset(uncommon_term_c_choose[i], 0xFF, sizeof(unsigned char) * term_size_p);
   	}
   	
+  	unsigned char unrel_place_flag = 0;
+  	long long unrel_place_idx = 0;
   	uncommon_decoded_codeword = (unsigned char**)malloc(sizeof(unsigned char*) * pow_val);
   	uncommon_decoded_message = (unsigned char**)malloc(sizeof(unsigned char*) * pow_val);
+  	tst_vct = (unsigned char**)malloc(sizeof(unsigned char*) * pow_val);
 	for(i = 0; i < pow_val; i++)
 	{
 		uncommon_decoded_codeword[i] = (unsigned char*)malloc(sizeof(unsigned char) * CODEWORD_LEN);
 		uncommon_decoded_message[i] = (unsigned char*)malloc(sizeof(unsigned char) * MESSAGE_LEN);
+		tst_vct[i] = (unsigned char*)malloc(sizeof(unsigned char) * CODEWORD_LEN);
   	}
   	for(i = 0; i < pow_val; i++)
 	{
 		memset(uncommon_decoded_codeword[i], 0xFF, sizeof(unsigned char) * CODEWORD_LEN);
 		memset(uncommon_decoded_message[i], 0xFF, sizeof(unsigned char) * MESSAGE_LEN);
+		
+		for(j = 0; j < CODEWORD_LEN; j++)
+		{
+			unrel_place_flag = 0;
+			for(k = 0; k < YITA; k++)
+			{
+				if(j == uncommon_place[k])
+				{
+					unrel_place_flag = 1;
+					unrel_place_idx = k;
+					break;
+				}
+			}
+			
+			if(1 == unrel_place_flag)
+			{
+				tst_vct[i][j] = power_polynomial_table[uncommon_seq[unrel_place_idx][i]][0];
+			}
+			else
+			{
+				tst_vct[i][j] = received_polynomial[j];
+			}
+			DEBUG_NOTICE("tst_vct: %ld %ld | %x\n", i, j, tst_vct[i][j]);
+		}
   	}
 	
 	return 0;
 }
 
-int uncommon_interpolation()
+int uncommon_interpolation(long long l)
 {
-	long long i = 0, j = 0, k = 0, l = 0;
+	long long i = 0, j = 0, k = 0;
+	//long long l = 0;
 	long long m = 0, n = 0, term_num = 0, term_num_real = term_size_p;
 	long long d_x = term_size_x + 1;
 	long long d_y = term_size_y + 1;
@@ -1507,7 +1526,7 @@ int uncommon_interpolation()
 #endif
 
 	/*interpolation*/
-	for(l = 0; l < pow_val; l++)
+	//for(l = 0; l < pow_val; l++)
 	{
 
 		for(j = (CODEWORD_LEN - YITA); j < CODEWORD_LEN; j++) //for I, as 2^q - 1
@@ -1522,6 +1541,7 @@ int uncommon_interpolation()
 #else
 				if(i != uncommon_seq[j - (CODEWORD_LEN - YITA)][l])
 				{
+					/*the test vector is chosen here!!!*/
 					continue;
 				}
 #endif
@@ -1815,7 +1835,7 @@ int uncommon_interpolation()
 	
 	}
 	
-	for(l = 0; l < pow_val; l++)
+	//for(l = 0; l < pow_val; l++)
 	{
 		DEBUG_NOTICE("---------------\n");
 		for(m = 0; m < d_y_num; m++)
@@ -1839,7 +1859,7 @@ int uncommon_interpolation()
 		}
 	}
 
-	for(l = 0; l < pow_val; l++)
+	//for(l = 0; l < pow_val; l++)
 	{
 		/*find the place of smallest polynomial*/
 		tmp_real = 0x7FFF;//notice this, it should be init large enough
@@ -1968,9 +1988,10 @@ long long uncommon_check_decoded_result()
 
 #if (1 == RE_ENCODING)
 #if (CFG_RR_MODE == FAST_RR_M1)
-int uncommon_fast_msg_get()
+int uncommon_fast_msg_get(long long l)
 {
-	long long i = 0, j = 0, l = 0;
+	long long i = 0, j = 0;
+	//long long l = 0;
 	long long best_place = pow_val;
 
 	unsigned char q0[CODEWORD_LEN], q1[CODEWORD_LEN];
@@ -1981,8 +2002,33 @@ int uncommon_fast_msg_get()
 	unsigned char tmp_q1[term_size_x * term_size_y];
 	unsigned char v_val = 0xFF, q1_val = 0xFF, q0_val = 0xFF;
 
-	for(l = 0; l < pow_val; l++)
+	unsigned char parity_seq[CODEWORD_LEN - MESSAGE_LEN];
+	for(i = 0; i < (CODEWORD_LEN - MESSAGE_LEN); i++)
 	{
+		parity_seq[i] = i;
+	}
+
+	//for(l = 0; l < pow_val; l++)
+	{
+
+#if 0
+		int tst_skip_cnt = CODEWORD_LEN;
+		tst_skip_cnt = CODEWORD_LEN;
+		for(i = 0; i < l; i++)
+		{
+			tst_skip_cnt = fast_check_tst_vct_radius(i, l);
+			DEBUG_INFO("tst_skip_cnt: %d\n", tst_skip_cnt);
+			if(((CODEWORD_LEN - MESSAGE_LEN) / 2) >= tst_skip_cnt)
+			{
+				break;
+			}
+		}
+		if(((CODEWORD_LEN - MESSAGE_LEN) / 2) >= tst_skip_cnt)
+		{
+			DEBUG_INFO("tst_vct_skip: %d %d\n", l, tst_skip_cnt);
+			continue;
+		}
+#endif
 
 		memset(q0, 0xFF, sizeof(unsigned char) * CODEWORD_LEN);
 		memset(q1, 0xFF, sizeof(unsigned char) * CODEWORD_LEN);
@@ -2034,9 +2080,15 @@ int uncommon_fast_msg_get()
 		{
 			DEBUG_NOTICE("q: %ld | %x %x\n", i, q0[i], q1[i]);
 		}
-
+#if 0
 		for(i = 0; i < CODEWORD_LEN; i++)
 		{
+			if(i < (CODEWORD_LEN - MESSAGE_LEN))
+			{
+				uncommon_decoded_codeword[l][i] = 0xFF;
+				//continue;
+			}
+		
 			q0_val = poly_eva(q0,
 				              CODEWORD_LEN,
 				              power_polynomial_table[i + 1][0]);
@@ -2122,9 +2174,117 @@ int uncommon_fast_msg_get()
 				         rec_dir_cw[i],
 				         uncommon_decoded_codeword[l][i]);
 		}
+#else
+		for(i = 0; i < CODEWORD_LEN; i++)
+		{
+			if(i < (CODEWORD_LEN - MESSAGE_LEN))
+			{
+				continue;
+			}
+		
+			q0_val = poly_eva(q0,
+				              CODEWORD_LEN,
+				              power_polynomial_table[i + 1][0]);
+#if 0
+			v_val = poly_eva(v,
+				             (MESSAGE_LEN + 1),
+				             power_polynomial_table[i + 1][0]);
+#else				             
+			v_val = g_v_val[i];
+#endif			
+			q1_val = poly_eva(q1,
+			                  CODEWORD_LEN,
+			                  power_polynomial_table[i + 1][0]);
+			if(0xFF != q1_val)
+			{
+				rec_dir_cw[i] = gf_div(gf_multp(q0_val, v_val),
+									   q1_val);
+			}
+			else//there are some problems now
+			{
+				for(j = 0; j < CODEWORD_LEN; j++)
+				{
+					if(0 != (j % 2))
+					{
+						q1_dev[j - 1] = q1[j];
+					}
+					else
+					{
+						q1_dev[j - 1] = 0xFF;
+					}
+				}
+				q1_val = poly_eva(q1_dev,
+				                  CODEWORD_LEN,
+				              	  power_polynomial_table[i + 1][0]);
+				
+				if(0xFF == v_val)
+				{
+					for(j = 1; j < (MESSAGE_LEN + 1); j++)
+					{
+						if(0 != (j % 2))
+						{
+							v_dev[j - 1] = v[j];
+						}
+						DEBUG_NOTICE("v_dev: %ld | %x\n", j - 1, v_dev[j - 1]);
+					}
+
+					v_val = poly_eva(v_dev,
+				             		 (MESSAGE_LEN + 1),
+				             		 power_polynomial_table[i + 1][0]);
+
+					rec_dir_cw[i] = gf_div(gf_multp(q0_val, v_val),
+									       q1_val);
+				}
+
+				if(0xFF == q0_val)
+				{
+					for(j = 1; j < (MESSAGE_LEN + 1); j++)
+					{
+						if(0 != (j % 2))
+						{
+							q0_dev[j - 1] = q0[j];
+						}
+						DEBUG_NOTICE("q0_dev: %ld | %x\n", j - 1, q0_dev[j - 1]);
+					}
+
+					q0_val = poly_eva(q0_dev,
+				             		 CODEWORD_LEN,
+				             		 power_polynomial_table[i + 1][0]);
+
+					rec_dir_cw[i] = gf_div(gf_multp(q0_val, v_val),
+									       q1_val);
+				}
+			}
+
+			uncommon_decoded_codeword[l][i] = gf_add(rec_dir_cw[i], phi[i]);
+			DEBUG_NOTICE("rec_dir_cw: %d | %d | %x*%x/%x=%x | %x\n",
+			             l,
+				         i,
+				         v_val,
+				         q0_val,
+				         q1_val,
+				         rec_dir_cw[i],
+				         uncommon_decoded_codeword[l][i]);
+		}
+		memcpy(uncommon_decoded_message[l], uncommon_decoded_codeword[l] + (CODEWORD_LEN - MESSAGE_LEN), sizeof(unsigned char) * MESSAGE_LEN);
+#if (1 == CFG_FAST_SKIP_TST_VCT)		
+		encoding3(uncommon_decoded_message[l], uncommon_decoded_codeword[l]);
+#endif		
+#endif
+		//erasure_decoding(uncommon_decoded_codeword[l], parity_seq);
+		//memcpy(uncommon_decoded_codeword[l], phi, sizeof(unsigned char) * CODEWORD_LEN);
+		for(i = 0; i < CODEWORD_LEN; i++)
+		{
+			DEBUG_NOTICE("decoded_codeword_get: %d | %d | %x | %x\n",
+			             l,
+				         i,
+				         uncommon_decoded_codeword[l][i],
+				         phi[i]);
+		}
 
 	}
 
+#if 0
 	best_place = uncommon_check_decoded_result();
 	memcpy(decoded_codeword, uncommon_decoded_codeword[best_place], sizeof(unsigned char) * CODEWORD_LEN);
 	memcpy(decoded_message, decoded_codeword + (CODEWORD_LEN - MESSAGE_LEN), sizeof(unsigned char) * MESSAGE_LEN);
@@ -2140,18 +2300,20 @@ int uncommon_fast_msg_get()
 	{
 		DEBUG_SYS("Best Place: %ld\n", best_place);
 	}
+#endif
 
 	return 0;
 }
 #endif
 
 #if (CFG_RR_MODE == BMA_RR)
-int uncommon_rr_factorization_recur()
+int uncommon_rr_factorization_recur(long long l)
 {
 	best_hamm_distance_code = 0x7FFF;
 	best_hamm_distance_bit = 0x7FFF;
 	
-	long long i = 0, j = 0, l = 0;
+	long long i = 0, j = 0;
+	//long long l = 0;
 	long long is_root = 0;
 	unsigned char root = 0xFF;
 
@@ -2164,7 +2326,7 @@ int uncommon_rr_factorization_recur()
 	unsigned char g_c_q[term_size_x * term_size_y], g_c_0_y[term_size_x * term_size_y];
 #endif
 
-	for(l = 0; l < pow_val; l++)
+	//for(l = 0; l < pow_val; l++)
 	{
 
 		memset(tmp_message, 0xFF, sizeof(unsigned char) * MESSAGE_LEN);
@@ -2385,12 +2547,13 @@ int uncommon_check_rr_decoded_result_recur(unsigned char *msg,
 	return 0;
 }
 
-int uncommon_recover_codeword()
+int uncommon_recover_codeword(long long l)
 {
-	long long i = 0, j = 0, cnt = 0, l = 0;
+	long long i = 0, j = 0, cnt = 0;
+	//long long l = 0;
 	long long best_place = pow_val;
 	
-	for(l = 0; l < pow_val; l++)
+	//for(l = 0; l < pow_val; l++)
 	{
 		for(i = 0; i < CODEWORD_LEN; i++)
 		{
@@ -2413,11 +2576,12 @@ int uncommon_recover_codeword()
 		{
 			DEBUG_NOTICE("decoded_codeword: %x\n", uncommon_decoded_codeword[l][i]);
 		}
-		erasure_decoding(uncommon_decoded_codeword[l]);
+		erasure_decoding(uncommon_decoded_codeword[l], unrel_group_seq);
 		memcpy(uncommon_decoded_codeword[l], phi, sizeof(unsigned char) * CODEWORD_LEN);
 		memcpy(uncommon_decoded_message[l], uncommon_decoded_codeword[l] + (CODEWORD_LEN - MESSAGE_LEN), sizeof(unsigned char) * MESSAGE_LEN);
 	}
-	
+
+#if 0
 	best_place = uncommon_check_decoded_result();
 	memcpy(decoded_codeword, uncommon_decoded_codeword[best_place], sizeof(unsigned char) * CODEWORD_LEN);
 	memcpy(decoded_message, decoded_codeword + (CODEWORD_LEN - MESSAGE_LEN), sizeof(unsigned char) * MESSAGE_LEN);
@@ -2433,6 +2597,7 @@ int uncommon_recover_codeword()
 	{
 		DEBUG_SYS("Best Place: %ld\n", best_place);
 	}
+#endif	
 	
 	return 0;
 }
@@ -2530,14 +2695,103 @@ int uncommon_interpolation_exit()
 		uncommon_decoded_codeword[i] = NULL;
 		free(uncommon_decoded_message[i]);
 		uncommon_decoded_message[i] = NULL;
+		free(tst_vct[i]);
+		tst_vct[i] = NULL;
 	}
 	free(uncommon_decoded_codeword);
+	uncommon_decoded_codeword = NULL;
 	free(uncommon_decoded_message);
+	uncommon_decoded_message = NULL;
+	free(tst_vct);
+	tst_vct = NULL;
 
 	return 0;
 }
 
+int fast_check_tst_vct_radius(long long dcd_cwd_idx, long long tst_vct_idx)
+{
+	long long i = 0;
+	int cwd_diff_cnt = 0;
+
+	DEBUG_INFO("fast_check_tst_vct_radius: %d %d\n", dcd_cwd_idx, tst_vct_idx);
+	
+	for(i = 0; i < CODEWORD_LEN; i++)
+	{
+		if(uncommon_decoded_codeword[dcd_cwd_idx][i]
+		   != tst_vct[tst_vct_idx][i])
+		{
+			cwd_diff_cnt++;
+		}
+	}
+
+	return cwd_diff_cnt;
+}
+
+int fast_skip_tst_vct(long long l)
+{
+	long long i = 0;
+	int tst_skip_cnt = CODEWORD_LEN;
+
+	for(i = 0; i < l; i++)
+	{
+		tst_skip_cnt = fast_check_tst_vct_radius(i, l);
+		DEBUG_INFO("tst_skip_cnt: %d\n", tst_skip_cnt);
+		if(((CODEWORD_LEN - MESSAGE_LEN) / 2) >= tst_skip_cnt)
+		{
+			memcpy(uncommon_decoded_codeword[l],
+			       uncommon_decoded_codeword[i],
+			       sizeof(unsigned char) * CODEWORD_LEN);
+			memcpy(uncommon_decoded_message[l],
+			       uncommon_decoded_message[i],
+			       sizeof(unsigned char) * MESSAGE_LEN);
+			break;
+		}
+	}
+	
+	return tst_skip_cnt;
+}
+
 #endif
+
+int check_lcc_result()
+{
+	long long i = 0;
+	long long best_place = pow_val;
+
+	best_place = uncommon_check_decoded_result();
+	memcpy(decoded_codeword, uncommon_decoded_codeword[best_place], sizeof(unsigned char) * CODEWORD_LEN);
+	memcpy(decoded_message, decoded_codeword + (CODEWORD_LEN - MESSAGE_LEN), sizeof(unsigned char) * MESSAGE_LEN);
+
+	for(i = 0; i < MESSAGE_LEN; i++)
+	{
+		DEBUG_IMPOTANT("uncommon_decoded_message: %d | %d | %x\n",
+		               best_place,
+		               i,
+		               decoded_message[i]);
+	}
+	if(0 != best_place)
+	{
+		DEBUG_IMPOTANT("Best Place: %ld\n", best_place);
+	}
+	
+#if (1 == TEST_MODE)
+	for(i = 0; i < pow_val; i++)
+	{
+		DEBUG_IMPOTANT("hamm_1: %ld | %ld\n",
+		          i,
+		          hamm_distance_code_cal(uncommon_decoded_codeword[best_place],
+		                                 uncommon_decoded_codeword[i],
+		                                 CODEWORD_LEN));
+		DEBUG_IMPOTANT("hamm_2: %ld | %ld\n",
+		          i,
+		          hamm_distance_code_cal(uncommon_decoded_codeword[best_place],
+		                                 tst_vct[i],
+		                                 CODEWORD_LEN));
+	}
+#endif
+
+	return 0;
+}
 
 int g_term_malloc()
 {
@@ -4279,7 +4533,7 @@ long long hamm_distance_code_cal(unsigned char *a,
 	{
 		if(a[i] != b[i])
 		{
-			DEBUG_NOTICE("hamm_distance_cal: %d %d\n", a[i], b[i]);
+			//DEBUG_NOTICE("hamm_distance_cal: %d %d\n", a[i], b[i]);
 			hamm_distance = hamm_distance + 1;
 		}
 	}
@@ -4542,9 +4796,8 @@ int term_size_adjust()
 
 int as_decoding()
 {
-#if (1 == CFG_DEBUG_IMPOTANT)	
 	long long i = 0;
-
+#if (1 == CFG_DEBUG_IMPOTANT)	
 	DEBUG_IMPOTANT("Received:\n");
 	for(i = 0; i < CODEWORD_LEN; i++)
 	{
@@ -4585,17 +4838,36 @@ int as_decoding()
 	koetter_interpolation();
 
 	uncommon_interpolation_init();
-	uncommon_interpolation();
+
+	long long l = 0;
+	int tst_skip_cnt = CODEWORD_LEN;
+	for(l = 0; l < pow_val; l++)
+	{
+
+#if (1 == CFG_FAST_SKIP_TST_VCT)
+		tst_skip_cnt = fast_skip_tst_vct(l);
+		if(((CODEWORD_LEN - MESSAGE_LEN) / 2) >= tst_skip_cnt)
+		{
+			DEBUG_INFO("tst_vct_skip: %d %d\n", l, tst_skip_cnt);
+			continue;
+		}
+		DEBUG_INFO("tst_vct_continue: %d %d\n", l, tst_skip_cnt);
+#endif		
+
+		uncommon_interpolation(l);
 
 #if (CFG_RR_MODE == FAST_RR_M1)
-	uncommon_fast_msg_get();
+		uncommon_fast_msg_get(l);
 #endif
 
 #if (CFG_RR_MODE == BMA_RR)
-	
-	uncommon_rr_factorization_recur();
-	uncommon_recover_codeword();
+		uncommon_rr_factorization_recur(l);
+		uncommon_recover_codeword(l);
 #endif
+
+	}
+
+	check_lcc_result();
 
 	uncommon_interpolation_exit();
 

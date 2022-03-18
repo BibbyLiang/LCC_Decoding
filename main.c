@@ -59,7 +59,7 @@ void main()
 	float runtime;
 
 	/*input simulation parameters*/
-	float eb2n0_start = 5.5, eb2n0_stop = 5.5, eb2n0_step = 1, eb2n0 = 5.5;
+	float eb2n0_start = 5.0, eb2n0_stop = 5.0, eb2n0_step = 1, eb2n0 = 5.0;
 	unsigned long iter_cnt = 1, monitor_cnt = 1;
 #if (0 == TEST_MODE)
 #if 1
@@ -80,8 +80,8 @@ void main()
 	/*init file log*/
 	char log_name[255];
 	sprintf(log_name, "n_%d-k_%d-m_%d-yita_%d-snr_%f_%f_%f-cnt_%ld_%ld.txt",
-					  CODEWORD_LEN,
-					  MESSAGE_LEN,
+					  CODEWORD_LEN - SHORTEN_LEN,
+					  MESSAGE_LEN - SHORTEN_LEN,
 					  S_MUL,
 					  YITA,
 					  eb2n0_start,
@@ -100,6 +100,7 @@ void main()
 	for(eb2n0 = eb2n0_start; eb2n0 <= eb2n0_stop; eb2n0 = eb2n0 + eb2n0_step)
 	{
 		/*init counts for certain SNR*/
+		gf_count_reset();
 		bit_err = 0;
 		symbol_err = 0;
 		symbol_err_prev = 0;
@@ -128,6 +129,9 @@ void main()
 				message_polynomial[i] = power_polynomial_table[j][0];
 #endif
 			}
+#if (0 == TEST_MODE)			
+			shorten_msg(MESSAGE_LEN, SHORTEN_LEN);
+#endif			
 			//memset(message_polynomial, 0x0, sizeof(unsigned char) * MESSAGE_LEN);
 
 #if (1 == TEST_MODE)
@@ -175,6 +179,9 @@ void main()
 					 symbol_num,
 					 received_polynomial,
 					 CODEWORD_LEN);
+#if (0 == TEST_MODE)
+			shorten_trans(CODEWORD_LEN, SHORTEN_LEN);
+#endif
 
 			/*add errors for test mode*/
 #if (1 == TEST_MODE)//test
@@ -235,17 +242,13 @@ void main()
 
 			/*nultiplicity assignment*/
 			mul_assign();
-			
 			gf_count_switch(1);
-			
 			/*re-encoding transform*/
 			re_encoding();
 
 			/*GS decoding*/
 			as_decoding();
-			
 			gf_count_switch(0);
-
 #if (1 == GF_CAL_COUNT)
 			/*count gf field calculating complexity*/
 			gf_count_hist(symbol_err_this_frame);
@@ -391,17 +394,18 @@ void main()
 				DEBUG_SYS("Frame Error: %ld\n", frame_err);
 				DEBUG_SYS("Symbol Error: %ld\n", symbol_err);
 				DEBUG_SYS("Bit Error: %ld\n", bit_err);
-				DEBUG_SYS("Hamming Error: %ld\n", hamm_err);
+				//DEBUG_SYS("Hamming Error: %ld\n", hamm_err);
 #if (0 == RECUR_RR)				
 				DEBUG_SYS("RR Error: %ld\n", rr_err_cnt);
 #endif
-#if (1 == GF_CAL_COUNT)				
-				DEBUG_SYS("Add Cnt: %ld\n", add_cnt);
-				DEBUG_SYS("Mul Cnt: %ld\n", mul_cnt);
-				DEBUG_SYS("Div Cnt: %ld\n", div_cnt);
-				DEBUG_SYS("RCB Cnt: %ld\n", real_cbm_cnt);
-				DEBUG_SYS("RMF Cnt: %ld\n", real_mul_ff_cnt);
-				DEBUG_SYS("Pow Cnt: %ld\n", pow_cnt);
+#if (1 == GF_CAL_COUNT)
+				DEBUG_SYS("Add/Mul Cnt: %f %f\n", (double)add_cnt / (double)(iter + 1), (double)(mul_cnt + div_cnt) / (double)(iter + 1));
+				//DEBUG_SYS("Add Cnt: %ld\n", add_cnt);
+				//DEBUG_SYS("Mul Cnt: %ld\n", mul_cnt);
+				//DEBUG_SYS("Div Cnt: %ld\n", div_cnt);
+				//DEBUG_SYS("RCB Cnt: %ld\n", real_cbm_cnt);
+				//DEBUG_SYS("RMF Cnt: %ld\n", real_mul_ff_cnt);
+				//DEBUG_SYS("Pow Cnt: %ld\n", pow_cnt);
 #endif				
 				DEBUG_SYS("Max DX: %ld\n", max_dx);
 				DEBUG_SYS("Max DY: %ld\n", max_dy);
@@ -419,17 +423,18 @@ void main()
 				fprintf(frc, "Frame Error: %ld\n", frame_err);
 				fprintf(frc, "Symbol Error: %ld\n", symbol_err);
 				fprintf(frc, "Bit Error: %ld\n", bit_err);
-				fprintf(frc, "Hamming Error: %ld\n", hamm_err);
+				//fprintf(frc, "Hamming Error: %ld\n", hamm_err);
 #if (0 == RECUR_RR)				
 				fprintf(frc, "RR Error: %ld\n", rr_err_cnt);
 #endif
-#if (1 == GF_CAL_COUNT)				
-				fprintf(frc, "Add Cnt: %ld\n", add_cnt);
-				fprintf(frc, "Mul Cnt: %ld\n", mul_cnt);
-				fprintf(frc, "Div Cnt: %ld\n", div_cnt);
-				fprintf(frc, "RCB Cnt: %ld\n", real_cbm_cnt);
-				fprintf(frc, "RMF Cnt: %ld\n", real_mul_ff_cnt);
-				fprintf(frc, "Pow Cnt: %ld\n", pow_cnt);
+#if (1 == GF_CAL_COUNT)
+				fprintf(frc, "Add/Mul Cnt: %f %f\n", (double)add_cnt / (double)(iter + 1), (double)(mul_cnt + div_cnt) / (double)(iter + 1));
+				//fprintf(frc, "Add Cnt: %ld\n", add_cnt);
+				//fprintf(frc, "Mul Cnt: %ld\n", mul_cnt);
+				//fprintf(frc, "Div Cnt: %ld\n", div_cnt);
+				//fprintf(frc, "RCB Cnt: %ld\n", real_cbm_cnt);
+				//fprintf(frc, "RMF Cnt: %ld\n", real_mul_ff_cnt);
+				//fprintf(frc, "Pow Cnt: %ld\n", pow_cnt);
 #endif
 				fprintf(frc, "TERM_SIZE: %ld %ld\n", term_size_x, term_size_y);
 			    fclose(frc);
@@ -443,7 +448,7 @@ void main()
 					{
 						//DEBUG_SYS("-------------------\n");
 						//DEBUG_SYS("Err Hist: %ld %ld\n", k, err_hist[k]);
-						DEBUG_SYS("Add/Mul Hist: %ld %f %f\n", k, (float)(add_cnt_hist[k] / err_hist[k]), (float)((mul_cnt_hist[k] + div_cnt_hist[k]) / err_hist[k]));
+						//DEBUG_SYS("Add/Mul Hist: %ld %f %f\n", k, (float)(add_cnt_hist[k] / err_hist[k]), (float)((mul_cnt_hist[k] + div_cnt_hist[k]) / err_hist[k]));
 						//DEBUG_SYS("Mul Hist: %ld %f\n", k, (float)(mul_cnt_hist[k] / err_hist[k]));
 						//DEBUG_SYS("Div Hist: %ld %f\n", k, (float)(div_cnt_hist[k] / err_hist[k]));
 						//DEBUG_SYS("RCB Hist: %ld %f\n", k, (float)(real_cbm_cnt_hist[k] / err_hist[k]));
@@ -454,7 +459,7 @@ void main()
 						frc = fopen(log_name, "a+");
 						//fprintf(frc, "-------------------\n");
 						//fprintf(frc, "Err Hist: %ld %ld\n", k, err_hist[k]);
-						fprintf(frc, "Add/Mul Hist: %ld %f %f\n", k, (float)(add_cnt_hist[k] / err_hist[k]), (float)((mul_cnt_hist[k] + div_cnt_hist[k]) / err_hist[k]));
+						//fprintf(frc, "Add/Mul Hist: %ld %f %f\n", k, (float)(add_cnt_hist[k] / err_hist[k]), (float)((mul_cnt_hist[k] + div_cnt_hist[k]) / err_hist[k]));
 						//fprintf(frc, "Mul Hist: %ld %f\n", k, (float)(mul_cnt_hist[k] / err_hist[k]));
 						//fprintf(frc, "Div Hist: %ld %f\n", k, (float)(div_cnt_hist[k] / err_hist[k]));
 						//fprintf(frc, "RCB Hist: %ld %f\n", k, (float)(real_cbm_cnt_hist[k] / err_hist[k]));
@@ -472,7 +477,7 @@ void main()
 /*more than 10 errors are found, and 10% simulation times have been excuted*/
 #if (1 == EARLY_TERMINATION)
 			if((EARLY_TERMINATION_NUM <= (frame_err - hamm_err))
-				&& ((iter_cnt / 10) < iter))
+				&& ((iter_cnt / 1000) < iter))
 			{
 				/*simulation times are enough, go to next Eb/N0 point*/
 				break;
@@ -495,17 +500,17 @@ void main()
 		DEBUG_SYS("Frame Error: %ld\n", frame_err);
 		DEBUG_SYS("Symbol Error: %ld\n", symbol_err);
 		DEBUG_SYS("Bit Error: %ld\n", bit_err);
-		DEBUG_SYS("Hamming Error: %ld\n", hamm_err);
+		//DEBUG_SYS("Hamming Error: %ld\n", hamm_err);
 #if (0 == RECUR_RR)		
 		DEBUG_SYS("RR Error: %ld\n", rr_err_cnt);
 #endif
 #if (1 == GF_CAL_COUNT)		
-		DEBUG_SYS("Add/Mul Cnt: %ld %ld\n", add_cnt, mul_cnt);
-		DEBUG_SYS("Mul Cnt: %ld\n", mul_cnt);
-		DEBUG_SYS("Div Cnt: %ld\n", div_cnt);
-		DEBUG_SYS("RCB Cnt: %ld\n", real_cbm_cnt);
-		DEBUG_SYS("RMF Cnt: %ld\n", real_mul_ff_cnt);
-		DEBUG_SYS("Pow Cnt: %ld\n", pow_cnt);
+		DEBUG_SYS("Add/Mul Cnt: %f %f\n", (double)add_cnt / (double)(iter + 1), (double)(mul_cnt + div_cnt) / (double)(iter + 1));
+		//DEBUG_SYS("Mul Cnt: %ld\n", mul_cnt);
+		//DEBUG_SYS("Div Cnt: %ld\n", div_cnt);
+		//DEBUG_SYS("RCB Cnt: %ld\n", real_cbm_cnt);
+		//DEBUG_SYS("RMF Cnt: %ld\n", real_mul_ff_cnt);
+		//DEBUG_SYS("Pow Cnt: %ld\n", pow_cnt);
 #endif
 		DEBUG_SYS("Uncoded Results: %.10lf %.10lf %.10lf\n", 
 			    (double)uncoded_frame_err / (double)(iter + 1),
@@ -529,17 +534,18 @@ void main()
 		fprintf(frc, "Frame Error: %ld\n", frame_err);
 		fprintf(frc, "Symbol Error: %ld\n", symbol_err);
 		fprintf(frc, "Bit Error: %ld\n", bit_err);
-		fprintf(frc, "Hamming Error: %ld\n", hamm_err);
+		//fprintf(frc, "Hamming Error: %ld\n", hamm_err);
 #if (0 == RECUR_RR)		
 		fprintf(frc, "RR Error: %ld\n", rr_err_cnt);
 #endif
-#if (1 == GF_CAL_COUNT)		
-		fprintf(frc, "Add Cnt: %ld\n", add_cnt);
-		fprintf(frc, "Mul Cnt: %ld\n", mul_cnt);
-		fprintf(frc, "Div Cnt: %ld\n", div_cnt);
-		fprintf(frc, "RCB Cnt: %ld\n", real_cbm_cnt);
-		fprintf(frc, "RMF Cnt: %ld\n", real_mul_ff_cnt);
-		fprintf(frc, "Pow Cnt: %ld\n", pow_cnt);
+#if (1 == GF_CAL_COUNT)
+		fprintf(frc, "Add/Mul Cnt: %f %f\n", (double)add_cnt / (double)(iter + 1), (double)(mul_cnt + div_cnt) / (double)(iter + 1));
+		//fprintf(frc, "Add Cnt: %ld\n", add_cnt);
+		//fprintf(frc, "Mul Cnt: %ld\n", mul_cnt);
+		//fprintf(frc, "Div Cnt: %ld\n", div_cnt);
+		//fprintf(frc, "RCB Cnt: %ld\n", real_cbm_cnt);
+		//fprintf(frc, "RMF Cnt: %ld\n", real_mul_ff_cnt);
+		//fprintf(frc, "Pow Cnt: %ld\n", pow_cnt);
 #endif		
 		fprintf(frc, "Uncoded Results: %.10lf %.10lf %.10lf\n", 
 			    (double)uncoded_frame_err / (double)(iter + 1),
