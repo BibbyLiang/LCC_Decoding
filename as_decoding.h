@@ -40,6 +40,8 @@ extern unsigned char *tmp_g_term_c_expand;
 extern unsigned char *mul_g_term_c_expand;
 extern unsigned char *g_term_c_expand_store;
 
+extern long long pow_val;
+
 extern int as_decoding();
 extern int g_term_malloc();
 extern int g_term_destroy();
@@ -67,5 +69,7 @@ extern int chien_searching_for_g_0_y_recur(unsigned char *g_c_in, unsigned char 
 extern int g_term_0_y_cal_recur(unsigned char *g_c_in, unsigned char *g_c_out);
 extern int g_term_new_gen_recur(unsigned char *g_c_in, unsigned char root_insert);
 extern int fast_check_tst_vct_radius(long long dcd_cwd_idx, long long tst_vct_idx);
+extern int store_q_poly_save(long long batch_idx, long long tst_vct_idx);
+extern int store_q_poly_load(long long batch_idx, long long tst_vct_idx);
 
 #endif

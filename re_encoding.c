@@ -35,7 +35,7 @@ unsigned char g_v_val[CODEWORD_LEN];
 #if (1 == RE_ENCODING)
 unsigned char re_encoded_codeword[CODEWORD_LEN];
 #endif
-
+unsigned char H_msg[MESSAGE_LEN + 1];
 
 void find_max_val(float matrix[][CODEWORD_LEN], long long col,
 					 unsigned char* m_ptr, unsigned char* n_ptr)
@@ -554,10 +554,26 @@ int v_cal()
 
 int g_v_val_cal()
 {
-	long long i = 0;
+	long long i = 0, j = 0;
+	unsigned char skip_v_flag = 0;
 	
 	for(i = 0; i < CODEWORD_LEN; i++)
 	{
+		skip_v_flag = 0;
+		for(j = 0; j < MESSAGE_LEN; j++)
+		{
+			if(i == rel_group_seq[j])
+			{
+				skip_v_flag = 1;
+				break;
+			}
+		}
+		if(1 == skip_v_flag)
+		{
+			g_v_val[i] = 0xFF;
+			continue;
+		}
+	
 		g_v_val[i] = poly_eva(v,
 				 			 (MESSAGE_LEN + 1),
 				 			 power_polynomial_table[i + 1][0]);
@@ -590,12 +606,30 @@ int l_cal(unsigned char locator_j, unsigned char *L)
 			v_tmp_1[j + 1] = L[j];//increase degree because of x term
 			DEBUG_NOTICE("v_tmp_1: %d | %x\n", j + 1, v_tmp_1[j + 1]);
 
-			v_tmp_2[j] = gf_multp(L[j], rel_group_seq[i]);//calculation of a_i term
+			if(0x0 == L[j])
+			{
+				v_tmp_2[j] = rel_group_seq[i];
+				continue;
+			}
+			if(0xFF != L[j])
+			{
+				v_tmp_2[j] = gf_multp(L[j], rel_group_seq[i]);//calculation of a_i term
+			}
 			DEBUG_NOTICE("v_tmp_2: %d | %x=%x*%x\n", j, v_tmp_2[j], L[j], rel_group_seq[i]);
 		}
 
 		for(j = 0; j < (MESSAGE_LEN + 1); j++)
 		{
+			if(0xFF == v_tmp_1[j])
+			{
+				L[j]= v_tmp_2[j];
+				continue;
+			}
+			if(0xFF == v_tmp_2[j])
+			{
+				L[j]= v_tmp_1[j];
+				continue;
+			}
 			L[j] = gf_add(v_tmp_1[j], v_tmp_2[j]);//add 2 parts
 			DEBUG_NOTICE("v_tmp: %d | %x\n", j, L[j]);
 		}
@@ -616,6 +650,16 @@ int l_cal(unsigned char locator_j, unsigned char *L)
 
 	for(i = 0; i < (MESSAGE_LEN + 1); i++)
 	{
+		if(0x0 == L[i])
+		{
+			L[i] = tmp_div;
+			continue;
+		}
+		if(0x0 == tmp_div)
+		{
+			continue;
+		}
+	
 		L[i] = gf_multp(L[i], tmp_div);
 		DEBUG_NOTICE("L: %d | %x\n", i, L[i]);
 	}
@@ -1052,6 +1096,49 @@ int erasure_decoding(unsigned char *r_seq, unsigned char *erasure_group)
 	return 0;
 }
 
+int erasure_decoding_lag(unsigned char *r_seq)
+{
+	long long i = 0, j = 0;
+
+	unsigned char L[MESSAGE_LEN][MESSAGE_LEN + 1];
+	memset(H_msg, 0xFF, sizeof(unsigned char) * (MESSAGE_LEN + 1));
+	for(i = 0; i < MESSAGE_LEN; i++)
+	{
+		l_cal(rel_group_seq[i], L[i]);
+	}
+	for(i = 0; i < MESSAGE_LEN; i++)
+	{
+		for(j = 0; j < (MESSAGE_LEN + 1); j++)
+		{
+			if(0xFF != L[i][j])
+			{
+				L[i][j] = gf_multp(L[i][j], r_seq[rel_group_seq[i]]);
+			}
+		}
+	}
+	for(i = 0; i < MESSAGE_LEN; i++)
+	{
+		for(j = 0; j < (MESSAGE_LEN + 1); j++)
+		{
+			H_msg[j] = gf_add(H_msg[j], L[i][j]);
+		}
+	}
+	for(i = 0; i < (MESSAGE_LEN + 1); i++)
+	{
+		DEBUG_NOTICE("H: %d | %x\n", i, H_msg[i]);
+	}
+	
+	for(i = 0; i < CODEWORD_LEN; i++)
+	{
+#if 1	
+		phi[i] = poly_eva(H_msg,
+		                  (MESSAGE_LEN + 1),
+		                  power_polynomial_table[i + 1][0]);
+		DEBUG_INFO("%x ", phi[i]);
+#endif		
+	}
+}
+
 int syndrome_re_encoding(unsigned char *synd)
 {
 	long long i = 0, j = 0;
@@ -1188,7 +1275,7 @@ int bm_re_encoding(unsigned char *msg_phi, unsigned char *tmp_cw)
 			B[j] = B[j - 1];
 		}
 		B[0] = 0xFF;
-		
+
 		for(j = 0; j < SYN_LEN; j++)
 		{
 			DEBUG_NOTICE("B: %d %x\n", j, B[j]);
@@ -1253,7 +1340,7 @@ int bm_re_encoding(unsigned char *msg_phi, unsigned char *tmp_cw)
 		{
 			continue;
 		}
-		
+
 		/*Although even more errors in reliable group may exist, they cannot be corrected.*/
 		if(root_found_cnt >= (SYN_LEN / 2))
 		{
@@ -1286,6 +1373,10 @@ int bm_re_encoding(unsigned char *msg_phi, unsigned char *tmp_cw)
 	for(i = 0; i < CODEWORD_LEN; i++)
 	{
 		DEBUG_NOTICE("%x ", err_location[i]);
+		if(0xFF != err_location[i])
+		{
+			DEBUG_NOTICE("err_location: %d %d\n", i, err_location[i]);
+		}
 	}
 	DEBUG_NOTICE("\n");
 
@@ -1349,7 +1440,14 @@ int bm_re_encoding(unsigned char *msg_phi, unsigned char *tmp_cw)
 
 	for(i = 0; i < CODEWORD_LEN; i++)
 	{
-		tmp_cw[i] = gf_add(received_polynomial[i], err_mag[i]);
+		if(0xFF != err_mag[i])
+		{
+			tmp_cw[i] = gf_add(received_polynomial[i], err_mag[i]);
+		}
+		else
+		{
+			tmp_cw[i] = received_polynomial[i];
+		}
 	}
 
 	return 0;
@@ -1474,9 +1572,7 @@ int re_encoding()
 #endif
 
 	v_cal();
-#if (CFG_RR_MODE == FAST_RR_M1)
-	g_v_val_cal();
-#endif
+
 #if 0//test
 	unsigned char L[MESSAGE_LEN];
 	l_cal(0x0, L);

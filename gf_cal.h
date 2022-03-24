@@ -47,6 +47,26 @@ extern long long real_mul_ff_cnt_hist[CODEWORD_LEN - MESSAGE_LEN - 1];
 extern long long pow_cnt_hist[CODEWORD_LEN - MESSAGE_LEN - 1];
 #endif
 
+#if (1 == CFG_PARTIALLY_PARALLEL)
+extern long long storage_cnt;
+extern long long *gf_add_in_batch;
+extern long long *gf_mul_in_batch;
+extern long long *running_time;
+
+extern long long cost_parallel;
+extern float speed_up;
+extern float efficiency;
+
+extern long long add_cnt_prev_batch;
+extern long long mul_cnt_prev_batch;
+extern long long div_cnt_prev_batch;
+
+extern long long *gf_add_in_batch_best;
+extern long long *gf_mul_in_batch_best;
+extern long long *gf_add_in_batch_worst;
+extern long long *gf_mul_in_batch_worst;
+#endif
+
 extern unsigned char gf_pow2poly(unsigned char val_in_pow);
 extern unsigned char gf_poly2pow(unsigned char val_in_poly);
 extern unsigned char gf_location(unsigned char val);
@@ -76,4 +96,9 @@ extern int gf_count_hist(long long err_cnt);
 extern void gf_count_switch(unsigned char count_switch);
 extern void BubbleSort4(float *A, int len, long long *A_idx);
 extern void gf_count_reset();
+#if (1 == CFG_PARTIALLY_PARALLEL)
+extern int gf_partially_parallel_init();
+extern int gf_partially_parallel_exit();
+extern int gf_partially_parallel_cnt(long long batch_idx);
+#endif
 #endif

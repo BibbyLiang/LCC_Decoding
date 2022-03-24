@@ -25,9 +25,13 @@
 #define DYNAMIC_TERM_Y			10/9
 #endif
 #if (1 == RE_ENCODING)
-#define SYN_LEN		(MESSAGE_LEN * 2 / 14)//need to be checked
+#define SYN_LEN		(MESSAGE_LEN * 2 / 20)//need to be checked
 #endif
-#define CFG_FAST_SKIP_TST_VCT	1
+#define CFG_FAST_SKIP_TST_VCT	0
+#define CFG_PARTIALLY_PARALLEL	1
+#define PARALLEL_BATCH_NUM		4//BATCH_NUM * BATCH_SIZE = TOTAL_NUM
+#define CFG_PARALLEL_FAST_SKIP	1
+#define CFG_STORE_PARALEL		0
 
 #define S_MUL					1
 #define LEX_TABLE_EXPAND_SIZE	4
@@ -56,6 +60,6 @@
 #if (0 == RE_ENCODING)
 #define CFG_RR_MODE			0
 #else
-#define CFG_RR_MODE			BMA_RR
+#define CFG_RR_MODE			FAST_RR_M1
 #endif
 #endif

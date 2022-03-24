@@ -35,6 +35,10 @@ void init_simulation()
 	gen_poly_trans();
 #endif
 
+#if (1 == CFG_PARTIALLY_PARALLEL)
+	gf_partially_parallel_init();
+#endif
+
 	return;
 }
 
@@ -242,13 +246,13 @@ void main()
 
 			/*nultiplicity assignment*/
 			mul_assign();
-			gf_count_switch(1);
+
 			/*re-encoding transform*/
 			re_encoding();
 
 			/*GS decoding*/
 			as_decoding();
-			gf_count_switch(0);
+
 #if (1 == GF_CAL_COUNT)
 			/*count gf field calculating complexity*/
 			gf_count_hist(symbol_err_this_frame);
@@ -512,6 +516,25 @@ void main()
 		//DEBUG_SYS("RMF Cnt: %ld\n", real_mul_ff_cnt);
 		//DEBUG_SYS("Pow Cnt: %ld\n", pow_cnt);
 #endif
+
+#if (1 == CFG_PARTIALLY_PARALLEL)
+		for(k = 0; k < PARALLEL_BATCH_NUM; k++)
+		{
+			//DEBUG_SYS("batch_add: %ld %ld\n", k, gf_add_in_batch[k]);
+			//DEBUG_SYS("batch_mul: %ld %ld\n", k, gf_mul_in_batch[k]);
+			DEBUG_SYS("batch_add: %ld %f %ld %d\n",
+			          k,
+			          (double)gf_add_in_batch[k] / (double)(iter + 1),
+			          gf_add_in_batch_best[k],
+			          gf_add_in_batch_worst[k]);
+			DEBUG_SYS("batch_mul: %ld %f %ld %ld\n",
+			          k,
+			          (double)gf_mul_in_batch[k] / (double)(iter + 1),
+			          gf_mul_in_batch_best[k],
+			          gf_mul_in_batch_worst[k]);
+		}
+#endif		
+
 		DEBUG_SYS("Uncoded Results: %.10lf %.10lf %.10lf\n", 
 			    (double)uncoded_frame_err / (double)(iter + 1),
 			    (double)uncoded_symbol_err / (double)(iter + 1) / CODEWORD_LEN * BITS_PER_SYMBOL_BPSK,
@@ -577,6 +600,10 @@ void main()
 
 #if (0 == TEST_MODE)
 	g_term_destroy();
+#endif
+
+#if (1 == CFG_PARTIALLY_PARALLEL)
+	gf_partially_parallel_exit();
 #endif
 
 	return;

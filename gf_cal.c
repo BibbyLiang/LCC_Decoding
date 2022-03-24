@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "debug_info.h"
 #include "gf_cal.h"
@@ -405,6 +406,26 @@ long long real_mul_ff_cnt_hist[CODEWORD_LEN - MESSAGE_LEN - 1];
 long long pow_cnt_hist[CODEWORD_LEN - MESSAGE_LEN - 1];
 #endif
 
+#if (1 == CFG_PARTIALLY_PARALLEL)
+long long storage_cnt = 0;
+long long *gf_add_in_batch;
+long long *gf_mul_in_batch;
+long long *running_time;
+
+long long cost_parallel = 0;
+float speed_up = 0;
+float efficiency = 0;
+
+long long add_cnt_prev_batch = 0;
+long long mul_cnt_prev_batch = 0;
+long long div_cnt_prev_batch = 0;
+
+long long *gf_add_in_batch_best;
+long long *gf_mul_in_batch_best;
+long long *gf_add_in_batch_worst;
+long long *gf_mul_in_batch_worst;
+#endif
+
 unsigned char gf_pow2poly(unsigned char val_in_pow)
 {
 	unsigned char val_in_poly = 0;
@@ -506,7 +527,7 @@ unsigned char gf_multp(unsigned char a, unsigned char b)
 	if(0x0 == b)
 	{
 		return a;
-	}	
+	}
 
 	unsigned char product_in_pow = (a + b) % (GF_FIELD - 1);
 
@@ -950,3 +971,99 @@ void BubbleSort4(float *A, int len, long long *A_idx)
         low++;            // 修改low值,后移一位
     }
 }
+
+#if (1 == CFG_PARTIALLY_PARALLEL)
+int gf_partially_parallel_init()
+{
+	gf_add_in_batch = (long long*)malloc(sizeof(long long) * PARALLEL_BATCH_NUM);
+	gf_mul_in_batch = (long long*)malloc(sizeof(long long) * PARALLEL_BATCH_NUM);
+	running_time = (long long*)malloc(sizeof(long long) * PARALLEL_BATCH_NUM);
+	
+	gf_add_in_batch_best = (long long*)malloc(sizeof(long long) * PARALLEL_BATCH_NUM);
+	gf_mul_in_batch_best = (long long*)malloc(sizeof(long long) * PARALLEL_BATCH_NUM);
+	gf_add_in_batch_worst = (long long*)malloc(sizeof(long long) * PARALLEL_BATCH_NUM);
+	gf_mul_in_batch_worst = (long long*)malloc(sizeof(long long) * PARALLEL_BATCH_NUM);
+	
+	memset(gf_add_in_batch, 0, sizeof(long long) * PARALLEL_BATCH_NUM);
+	memset(gf_mul_in_batch, 0, sizeof(long long) * PARALLEL_BATCH_NUM);
+	memset(running_time, 0, sizeof(long long) * PARALLEL_BATCH_NUM);
+	
+	memset(gf_add_in_batch_best, 0, sizeof(long long) * PARALLEL_BATCH_NUM);
+	memset(gf_mul_in_batch_best, 0, sizeof(long long) * PARALLEL_BATCH_NUM);
+	memset(gf_add_in_batch_worst, 0, sizeof(long long) * PARALLEL_BATCH_NUM);
+	memset(gf_mul_in_batch_worst, 0, sizeof(long long) * PARALLEL_BATCH_NUM);
+	
+	return 0;
+}
+
+int gf_partially_parallel_exit()
+{
+	free(gf_add_in_batch);
+	gf_add_in_batch = NULL;
+	free(gf_mul_in_batch);
+	gf_mul_in_batch = NULL;
+	free(running_time);
+	running_time = NULL;
+	
+	free(gf_add_in_batch_best);
+	gf_add_in_batch_best = NULL;
+	free(gf_mul_in_batch_best);
+	gf_mul_in_batch_best = NULL;
+	free(gf_add_in_batch_worst);
+	gf_add_in_batch_worst = NULL;
+	free(gf_mul_in_batch_worst);
+	gf_mul_in_batch_worst = NULL;
+	
+	return 0;
+}
+
+int gf_partially_parallel_cnt(long long batch_idx)
+{
+	storage_cnt = 0;
+
+	long long add_inc = add_cnt - add_cnt_prev_batch;
+	long long mul_inc = (mul_cnt + div_cnt)
+						- (mul_cnt_prev_batch + div_cnt_prev_batch);
+
+	gf_add_in_batch[batch_idx] = gf_add_in_batch[batch_idx] + add_inc;
+	gf_mul_in_batch[batch_idx] = gf_mul_in_batch[batch_idx] + mul_inc;
+	running_time[batch_idx] = 0;
+
+	if((0 == gf_add_in_batch_best[batch_idx])
+	   && (0 == gf_mul_in_batch_best[batch_idx]))
+	{
+		gf_add_in_batch_best[batch_idx] = add_inc;
+		gf_mul_in_batch_best[batch_idx] = mul_inc;
+	}
+
+	if((add_inc < gf_add_in_batch_best[batch_idx])
+		&& (0 != add_inc))
+	{
+		gf_add_in_batch_best[batch_idx] = add_inc;
+	}
+	if((mul_inc < gf_mul_in_batch_best[batch_idx])
+		&& (0 != mul_inc))
+	{
+		gf_mul_in_batch_best[batch_idx] = mul_inc;
+	}
+
+	if(add_inc > gf_add_in_batch_worst[batch_idx])
+	{
+		gf_add_in_batch_worst[batch_idx] = add_inc;
+	}
+	if(mul_inc > gf_mul_in_batch_worst[batch_idx])
+	{
+		gf_mul_in_batch_worst[batch_idx] = mul_inc;
+	}
+
+	add_cnt_prev_batch = add_cnt;
+	mul_cnt_prev_batch = mul_cnt;
+	div_cnt_prev_batch = div_cnt;
+
+	cost_parallel = 0;
+	speed_up = 0;
+	efficiency = 0;
+
+	return 0;
+}
+#endif
