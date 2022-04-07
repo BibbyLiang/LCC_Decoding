@@ -58,12 +58,17 @@ void main()
 #if (1 == GF_CAL_COUNT)	
 	long long symbol_err_this_frame = 0;
 #endif
+#if (1 == CFG_PARTIALLY_PARALLEL)
+	long long batch_size = 0;
+	double latency_add = 0, latency_mul = 0;
+#endif	
+	float avg_round = 0;
 
 	clock_t start, stop;
 	float runtime;
 
 	/*input simulation parameters*/
-	float eb2n0_start = 5.0, eb2n0_stop = 5.0, eb2n0_step = 1, eb2n0 = 5.0;
+	float eb2n0_start = 2.5, eb2n0_stop = 2.5, eb2n0_step = 1, eb2n0 = 2.5;
 	unsigned long iter_cnt = 1, monitor_cnt = 1;
 #if (0 == TEST_MODE)
 #if 1
@@ -113,6 +118,11 @@ void main()
 		uncoded_symbol_err = 0;
 		uncoded_frame_err = 0;
 		hamm_err = 0;
+		memset(skip_hist, 0, sizeof(long long) * pow_val);
+		memset(pgd_hist, 0, sizeof(long long) * pow_val);
+		memset(round_hist, 0, sizeof(long long) * (pow_val / PARALLEL_BATCH_NUM + 1));
+		memset(latency_per_round_add, 0, sizeof(long long) * batch_size);
+		memset(latency_per_round_mul, 0, sizeof(long long) * batch_size);
 
 		/*for every frame*/
 		for(iter = 0; iter < iter_cnt; iter++)
@@ -246,13 +256,13 @@ void main()
 
 			/*nultiplicity assignment*/
 			mul_assign();
-
+			gf_count_switch(1);
 			/*re-encoding transform*/
 			re_encoding();
 
 			/*GS decoding*/
 			as_decoding();
-
+			gf_count_switch(0);
 #if (1 == GF_CAL_COUNT)
 			/*count gf field calculating complexity*/
 			gf_count_hist(symbol_err_this_frame);
@@ -261,6 +271,7 @@ void main()
 			uncoded_frame_err_flag = 0;
 
 			/*count decoded errors*/
+#if (1 == SYS_ENC)			
 			for(i = 0; i < MESSAGE_LEN; i++)
 			{
 				DEBUG_NOTICE("%x %x\n", decoded_message[i], message_polynomial[i]);
@@ -283,10 +294,52 @@ void main()
 					}
 				}
 			}
+#else
+			for(i = 0; i < CODEWORD_LEN; i++)
+			{
+				DEBUG_NOTICE("%x %x\n", decoded_codeword[i], encoded_polynomial[i]);
+				if(decoded_codeword[i] != encoded_polynomial[i])
+				{
+					symbol_err = symbol_err + 1;
+					if(0 == frame_err_flag)
+					{
+						frame_err_flag = 1;
+						frame_err = frame_err + 1;
+					}
+					for(j = 0; j < GF_Q; j++)
+					{
+						tmp_mes = ((encoded_polynomial[i] >> j) & 0x1);
+						tmp_dec = ((decoded_codeword[i] >> j) & 0x1);
+						if(tmp_mes != tmp_dec)
+						{
+							bit_err = bit_err + 1;
+						}
+					}
+				}
+			}
+#endif
+
+			if((((CODEWORD_LEN - MESSAGE_LEN) / 2) >= (uncoded_symbol_err - symbol_err_prev))
+			   && (1 == frame_err_flag))
+			{
+				DEBUG_SYS("Radius Err. for Decoding: %d %d\n",
+						  frame_err_flag,
+						  (uncoded_symbol_err - symbol_err_prev));
+			}
+			
+			if((((CODEWORD_LEN - MESSAGE_LEN) / 2) >= best_tst_vct_diff)
+			   && (1 == frame_err_flag))
+			{
+				DEBUG_SYS("Radius Err. for Decoding: %d %d\n",
+						  frame_err_flag,
+						  best_tst_vct_diff);
+			}
 
 			/*print program error*/
-			if((1 == decoding_ok_flag)
+			if(((1 == decoding_ok_flag)
 				&& (1 == frame_err_flag))
+				|| ((((CODEWORD_LEN - MESSAGE_LEN) / 2) >= (uncoded_symbol_err - symbol_err_prev))
+					&& (1 == frame_err_flag)))
 			{
 				if(0 == hamm_distance_debug)
 				{
@@ -415,6 +468,48 @@ void main()
 				DEBUG_SYS("Max DY: %ld\n", max_dy);
 				DEBUG_SYS("TERM_SIZE: %ld %ld\n", term_size_x, term_size_y);
 
+#if (1 == CFG_PARTIALLY_PARALLEL)
+				for(k = 0; k < PARALLEL_BATCH_NUM; k++)
+				{
+					//DEBUG_SYS("batch_add: %ld %ld\n", k, gf_add_in_batch[k]);
+					//DEBUG_SYS("batch_mul: %ld %ld\n", k, gf_mul_in_batch[k]);
+					DEBUG_INFO("batch_add: %ld %f %ld %d\n",
+					          k,
+					          (double)gf_add_in_batch[k] / (double)(iter + 1),
+					          gf_add_in_batch_best[k],
+					          gf_add_in_batch_worst[k]);
+					DEBUG_INFO("batch_mul: %ld %f %ld %ld\n",
+					          k,
+					          (double)gf_mul_in_batch[k] / (double)(iter + 1),
+					          gf_mul_in_batch_best[k],
+					          gf_mul_in_batch_worst[k]);
+				}
+				
+				batch_size = pow_val / PARALLEL_BATCH_NUM;
+				latency_add = 0, latency_mul = 0;
+				for(k = 0; k < batch_size; k++)
+				{
+					DEBUG_INFO("round_add: %ld %f %f\n",
+					          k,
+					          (double)cmplx_per_round_add[k] / (double)(iter + 1),
+					          (double)latency_per_round_add[k] / (double)(iter + 1));
+					DEBUG_INFO("round_mul: %ld %f %f\n",
+					          k,
+					          (double)cmplx_per_round_mul[k] / (double)(iter + 1),
+					          (double)latency_per_round_mul[k] / (double)(iter + 1));
+					          
+					latency_add = latency_add + (double)latency_per_round_add[k] / (double)(iter + 1);
+					latency_mul = latency_mul + (double)latency_per_round_mul[k] / (double)(iter + 1);
+				}
+				DEBUG_SYS("Latency: %f %f\n", latency_add, latency_mul);
+				avg_round = 0;
+				for(i = 0; i < (pow_val / PARALLEL_BATCH_NUM + 1); i++)
+				{
+					avg_round = avg_round + (float)(round_hist[i] * (i));
+				}
+				DEBUG_SYS("avg_round: %f\n", avg_round / (float)(iter + 1));
+#endif		
+
 #if (1 == OUTPUT_LOG)
 				frc = fopen(log_name, "a+");
 				fprintf(frc, "---------------------\n");
@@ -441,6 +536,8 @@ void main()
 				//fprintf(frc, "Pow Cnt: %ld\n", pow_cnt);
 #endif
 				fprintf(frc, "TERM_SIZE: %ld %ld\n", term_size_x, term_size_y);
+				fprintf(frc, "Latency: %f %f\n", latency_add, latency_mul);
+				fprintf(frc, "avg_round: %f\n", avg_round / (float)(iter + 1));
 			    fclose(frc);
 				frc = NULL;
 #endif
@@ -481,7 +578,7 @@ void main()
 /*more than 10 errors are found, and 10% simulation times have been excuted*/
 #if (1 == EARLY_TERMINATION)
 			if((EARLY_TERMINATION_NUM <= (frame_err - hamm_err))
-				&& ((iter_cnt / 1000) < iter))
+				&& ((iter_cnt / 10) < iter))
 			{
 				/*simulation times are enough, go to next Eb/N0 point*/
 				break;
@@ -522,18 +619,61 @@ void main()
 		{
 			//DEBUG_SYS("batch_add: %ld %ld\n", k, gf_add_in_batch[k]);
 			//DEBUG_SYS("batch_mul: %ld %ld\n", k, gf_mul_in_batch[k]);
-			DEBUG_SYS("batch_add: %ld %f %ld %d\n",
+			DEBUG_INFO("batch_add: %ld %f %ld %d\n",
 			          k,
 			          (double)gf_add_in_batch[k] / (double)(iter + 1),
 			          gf_add_in_batch_best[k],
 			          gf_add_in_batch_worst[k]);
-			DEBUG_SYS("batch_mul: %ld %f %ld %ld\n",
+			DEBUG_INFO("batch_mul: %ld %f %ld %ld\n",
 			          k,
 			          (double)gf_mul_in_batch[k] / (double)(iter + 1),
 			          gf_mul_in_batch_best[k],
 			          gf_mul_in_batch_worst[k]);
 		}
+		
+		batch_size = pow_val / PARALLEL_BATCH_NUM;
+		latency_add = 0, latency_mul = 0;
+		for(k = 0; k < batch_size; k++)
+		{
+			DEBUG_INFO("round_add: %ld %f %f\n",
+			          k,
+			          (double)cmplx_per_round_add[k] / (double)(iter + 1),
+			          (double)latency_per_round_add[k] / (double)(iter + 1));
+			DEBUG_INFO("round_mul: %ld %f %f\n",
+			          k,
+			          (double)cmplx_per_round_mul[k] / (double)(iter + 1),
+			          (double)latency_per_round_mul[k] / (double)(iter + 1));
+			          
+			latency_add = latency_add + (double)latency_per_round_add[k] / (double)(iter + 1);
+			latency_mul = latency_mul + (double)latency_per_round_mul[k] / (double)(iter + 1);
+		}
+		DEBUG_SYS("Latency: %f %f\n", latency_add, latency_mul);
 #endif		
+
+		for(i = 0; i < pow_val; i++)
+		{
+			if(0 != skip_hist[i])
+			{
+				DEBUG_SYS("skip_hist: %ld %ld\n", i, skip_hist[i]);
+			}
+		}
+		for(i = 0; i < pow_val; i++)
+		{
+			if(0 != pgd_hist[i])
+			{
+				DEBUG_SYS("pgd_hist: %ld %ld\n", i, pgd_hist[i]);
+			}
+		}
+		avg_round = 0;
+		for(i = 0; i < (pow_val / PARALLEL_BATCH_NUM + 1); i++)
+		{
+			if(0 != round_hist[i])
+			{
+				DEBUG_SYS("round_hist: %ld %ld\n", i, round_hist[i]);
+			}
+			avg_round = avg_round + (float)(round_hist[i] * (i));
+		}
+		DEBUG_SYS("avg_round: %f\n", avg_round / (float)(iter + 1));
 
 		DEBUG_SYS("Uncoded Results: %.10lf %.10lf %.10lf\n", 
 			    (double)uncoded_frame_err / (double)(iter + 1),
@@ -570,6 +710,21 @@ void main()
 		//fprintf(frc, "RMF Cnt: %ld\n", real_mul_ff_cnt);
 		//fprintf(frc, "Pow Cnt: %ld\n", pow_cnt);
 #endif		
+
+		fprintf(frc, "Latency: %f %f\n", latency_add, latency_mul);
+		for(i = 0; i < pow_val; i++)
+		{
+			fprintf(frc, "skip_hist: %ld %ld\n", i, skip_hist[i]);
+		}
+		for(i = 0; i < pow_val; i++)
+		{
+			fprintf(frc, "pgd_hist: %ld %ld\n", i, pgd_hist[i]);
+		}
+		for(i = 0; i < (pow_val / PARALLEL_BATCH_NUM + 1); i++)
+		{
+			fprintf(frc, "round_hist: %ld %ld\n", i, round_hist[i]);
+		}
+		fprintf(frc, "avg_round: %f\n", avg_round / (float)(iter + 1));
 		fprintf(frc, "Uncoded Results: %.10lf %.10lf %.10lf\n", 
 			    (double)uncoded_frame_err / (double)(iter + 1),
 			    (double)uncoded_symbol_err / (double)(iter + 1) / CODEWORD_LEN * BITS_PER_SYMBOL_BPSK,

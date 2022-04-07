@@ -1,14 +1,14 @@
 #ifndef CFG_DECODING_H
 #define CFG_DECODING_H
 
-#define GF_Q			 8
+#define GF_Q			 4
 #define GF_CAL_COUNT	 1
 
 #define SYS_ENC			 1
 
 #define TEST_MODE		 0
 
-#define EARLY_TERMINATION		1
+#define EARLY_TERMINATION		0
 #define EARLY_TERMINATION_NUM	100
 #define OUTPUT_LOG				0
 
@@ -28,16 +28,25 @@
 #define SYN_LEN		(MESSAGE_LEN * 2 / 20)//need to be checked
 #endif
 #define CFG_FAST_SKIP_TST_VCT	0
+
 #define CFG_PARTIALLY_PARALLEL	1
-#define PARALLEL_BATCH_NUM		4//BATCH_NUM * BATCH_SIZE = TOTAL_NUM
-#define CFG_PARALLEL_FAST_SKIP	1
+#define PARALLEL_BATCH_NUM		1//BATCH_NUM * BATCH_SIZE = TOTAL_NUM
+#define CFG_PARALLEL_FAST_SKIP	0
 #define CFG_STORE_PARALEL		0
+#define CFG_STORE_LEN			0
+#define CFG_GROUP_SCHEME		5
+
+#define CFG_Q0_FAST_SKIP		1//44
+#define CFG_PRG_DECODING		1
+#define CFG_IMD_STORE			1
+
+#define BF_INTERPOLATION		0
 
 #define S_MUL					1
 #define LEX_TABLE_EXPAND_SIZE	4
 #define YITA					8
 
-#define SHORTEN_LEN				7
+#define SHORTEN_LEN				0
 
 #if (1 == RE_ENCODING)
 #define Y_WEIGHT				(-1)
@@ -62,4 +71,9 @@
 #else
 #define CFG_RR_MODE			FAST_RR_M1
 #endif
+
+/*there may be some problems. and it should be used with BF_INTERPOLATION*/
+#define TERM_SIZE_DBG		1//33
+#define FAST_RR_M1_DBG		1
+
 #endif

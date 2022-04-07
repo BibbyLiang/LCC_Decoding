@@ -972,6 +972,45 @@ void BubbleSort4(float *A, int len, long long *A_idx)
     }
 }
 
+void BubbleSort5(float *A, int len, long long *A_idx)
+{
+    int low = 0, high = len - 1;
+    int i = 0;
+    float tmp = 0;
+
+    while(low < high)
+    {
+        for(i = low; i < high; i++)  // 正向冒泡,找到最小者
+        {
+            if(A[i] < A[i + 1])
+            {
+                tmp = A[i];
+                A[i] = A[i + 1];
+                A[i + 1] = tmp;
+
+                tmp = A_idx[i];
+                A_idx[i] = A_idx[i + 1];
+                A_idx[i + 1] = tmp;
+            }
+        }
+        high--;            // 修改high值, 前移一位 
+        for(i = high; i > low; i--)     // 反向冒泡,找到最大者 
+        {
+            if(A[i] > A[i - 1])
+            {
+                tmp = A[i];
+                A[i] = A[i - 1];
+                A[i - 1] = tmp;
+
+                tmp = A_idx[i];
+                A_idx[i] = A_idx[i - 1];
+                A_idx[i - 1] = tmp;
+            }
+        }
+        low++;            // 修改low值,后移一位
+    }
+}
+
 #if (1 == CFG_PARTIALLY_PARALLEL)
 int gf_partially_parallel_init()
 {
@@ -993,6 +1032,16 @@ int gf_partially_parallel_init()
 	memset(gf_add_in_batch_worst, 0, sizeof(long long) * PARALLEL_BATCH_NUM);
 	memset(gf_mul_in_batch_worst, 0, sizeof(long long) * PARALLEL_BATCH_NUM);
 	
+	long long batch_size = pow_val / PARALLEL_BATCH_NUM;
+	cmplx_per_round_add = (long long*)malloc(sizeof(long long) * batch_size);
+	latency_per_round_add = (long long*)malloc(sizeof(long long) * batch_size);
+	memset(cmplx_per_round_add, 0, sizeof(long long) * batch_size);
+	memset(latency_per_round_add, 0, sizeof(long long) * batch_size);
+	cmplx_per_round_mul = (long long*)malloc(sizeof(long long) * batch_size);
+	latency_per_round_mul = (long long*)malloc(sizeof(long long) * batch_size);
+	memset(cmplx_per_round_mul, 0, sizeof(long long) * batch_size);
+	memset(latency_per_round_mul, 0, sizeof(long long) * batch_size);
+	
 	return 0;
 }
 
@@ -1013,6 +1062,15 @@ int gf_partially_parallel_exit()
 	gf_add_in_batch_worst = NULL;
 	free(gf_mul_in_batch_worst);
 	gf_mul_in_batch_worst = NULL;
+	
+	free(cmplx_per_round_add);
+	cmplx_per_round_add = NULL;
+	free(latency_per_round_add);
+	latency_per_round_add = NULL;
+	free(cmplx_per_round_mul);
+	cmplx_per_round_mul = NULL;
+	free(latency_per_round_mul);
+	latency_per_round_mul = NULL;
 	
 	return 0;
 }

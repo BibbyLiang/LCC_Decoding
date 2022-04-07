@@ -37,6 +37,7 @@ extern int recover_codeword();
 extern int chnl_rel_seq_order();
 extern int erasure_decoding(unsigned char *r_seq, unsigned char *erasure_group);
 extern int erasure_decoding_lag(unsigned char *r_seq);
+extern int erasure_decoding_use(unsigned char *r_seq, unsigned char *erasure_group);
 extern int g_v_val_cal();
 
 #endif

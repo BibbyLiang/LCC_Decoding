@@ -41,6 +41,16 @@ extern unsigned char *mul_g_term_c_expand;
 extern unsigned char *g_term_c_expand_store;
 
 extern long long pow_val;
+extern long long *cmplx_per_round_add;
+extern long long *latency_per_round_add;
+extern long long *cmplx_per_round_mul;
+extern long long *latency_per_round_mul;
+
+extern long long *skip_hist;
+extern long long *pgd_hist;
+extern long long *round_hist;
+
+extern long long best_tst_vct_diff;
 
 extern int as_decoding();
 extern int g_term_malloc();
@@ -71,5 +81,13 @@ extern int g_term_new_gen_recur(unsigned char *g_c_in, unsigned char root_insert
 extern int fast_check_tst_vct_radius(long long dcd_cwd_idx, long long tst_vct_idx);
 extern int store_q_poly_save(long long batch_idx, long long tst_vct_idx);
 extern int store_q_poly_load(long long batch_idx, long long tst_vct_idx);
+extern int bf_polynomial_process(unsigned char locator, unsigned char **poly, unsigned char **poly_back);
+#if (1 == CFG_PRG_DECODING)
+extern int MLcriterion(unsigned char est_cwd[]);
+#endif
+#if (1 == CFG_IMD_STORE)
+int store_q_c_save(long long layer_idx, long long node_idx, long long tst_vct_idx);
+int store_q_c_load(long long layer_idx, long long node_idx, long long tst_vct_idx);
+#endif
 
 #endif

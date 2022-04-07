@@ -174,6 +174,13 @@ int chnl_rel_cal(float **input_seq,
 		/*for BPSK*/
 		map[i][0] = 1 / (PI * n0) * exp((-d0) / n0);
         map[i][1] = 1 / (PI * n0) * exp((-d1) / n0);
+        DEBUG_INFO("map: %d %f | %f %f | %f %f\n",
+        		   i,
+        		   n0,
+        		   d0,
+        		   d1,
+        		   map[i][0],
+        		   map[i][1]);
 	}
 
 	for(i = 0; i < GF_FIELD; i++)
@@ -186,7 +193,13 @@ int chnl_rel_cal(float **input_seq,
 			{
 				/*for BPSK*/
 				tmp_bit = ((power_polynomial_table[i][1] >> k) & 0x1);
-
+				DEBUG_INFO("chnl_rel_matrix: %d %d | %d | %d | %f %f\n",
+		        		   i,
+		        		   j,
+		        		   k,
+		        		   tmp_bit,
+		        		   chnl_rel_matrix[i][j],
+		        		   map[j * GF_Q + k][tmp_bit]);
 				chnl_rel_matrix[i][j] = chnl_rel_matrix[i][j]
 									   * map[j * GF_Q + k][tmp_bit];
 			}
@@ -577,6 +590,9 @@ int g_v_val_cal()
 		g_v_val[i] = poly_eva(v,
 				 			 (MESSAGE_LEN + 1),
 				 			 power_polynomial_table[i + 1][0]);
+		DEBUG_NOTICE("g_v_val: %d | %x\n",
+			         i,
+			         g_v_val[i]);		 			 
 	}
 	
 	return 0;
@@ -1081,6 +1097,125 @@ int erasure_decoding(unsigned char *r_seq, unsigned char *erasure_group)
 	for(i = 0; i < CODEWORD_LEN; i++)
 	{
 		DEBUG_INFO("%x ", phi[i]);
+	}
+	DEBUG_INFO("\n");
+#if 0
+	DEBUG_INFO("code_val: ");
+	for(i = 0; i < (GF_FIELD - 1); i++)
+	{
+		DEBUG_INFO("%x ", poly_eva(phi, (CODEWORD_LEN), power_polynomial_table[i + 1][0]));
+	}
+	DEBUG_INFO("\n");
+#endif	
+#endif
+
+	return 0;
+}
+
+int erasure_decoding_use(unsigned char *r_seq, unsigned char *erasure_group)
+{
+	long long i = 0, j = 0, k = 0, l = 0;
+	unsigned char find_flag = 0;
+	memset(syndrome, 0xFF, sizeof(unsigned char) * (CODEWORD_LEN - MESSAGE_LEN));
+
+	//syndrome_cal(r_seq, syndrome, CODEWORD_LEN, MESSAGE_LEN);
+
+	unsigned char tao_dev[(CODEWORD_LEN - MESSAGE_LEN + 1) - 1]; 
+	unsigned char tmp = 0xFF, locator = 0xFF;
+	//memset(phi, 0xFF, sizeof(unsigned char) * CODEWORD_LEN);
+	memcpy(erasure_polynomial, r_seq, sizeof(unsigned char) * CODEWORD_LEN);
+	//for(i = 0; i < (CODEWORD_LEN - MESSAGE_LEN); i++)
+	for(i = 0; i < CODEWORD_LEN; i++)
+	{
+		for(k = 0; k < (CODEWORD_LEN - MESSAGE_LEN); k++)
+		{
+			if(erasure_group[k] == i)
+			{
+				find_flag = 1;
+				break;
+			}
+			else
+			{
+				find_flag = 0;
+			}
+		}
+
+		if(1 == find_flag)
+		{
+			erasure_polynomial[i] = 0xFF;
+			DEBUG_NOTICE("erasure_polynomial: %d %x %x\n", i, r_seq[i], erasure_polynomial[i]);
+		}
+	}
+	find_flag = 0;
+	
+	syndrome_cal(erasure_polynomial, syndrome,
+				  CODEWORD_LEN, MESSAGE_LEN);
+	tao_cal(erasure_group);
+	sigma_cal();
+
+	for(i = 0; i < (CODEWORD_LEN - MESSAGE_LEN); i++)
+	{
+		if(0 != (i % 2))
+		{
+			tao_dev[i] = 0xFF;
+		}
+		else
+		{
+			tao_dev[i] = tao[i + 1];
+		}
+	}
+
+#if (1 == CFG_DEBUG_NOTICE)	
+	DEBUG_NOTICE("tao_dev: ");
+	for(i = 0; i < (CODEWORD_LEN - MESSAGE_LEN); i++)
+	{
+		DEBUG_NOTICE("%x ", tao_dev[i]);
+	}
+	DEBUG_NOTICE("\n");
+#endif
+
+	for(i = 0; i < CODEWORD_LEN; i++)
+	{
+		for(k = 0; k < (CODEWORD_LEN - MESSAGE_LEN); k++)
+		{
+			if(erasure_group[k] == i)
+			{
+				find_flag = 1;
+				break;
+			}
+			else
+			{
+				find_flag = 0;
+			}
+		}
+
+		if(1 == find_flag)
+		{
+			locator = power_polynomial_table[i + 1][0];
+			locator = ((GF_FIELD - 1) - locator) % (GF_FIELD - 1);
+			DEBUG_NOTICE("%x: %x\n", i, locator);
+			tmp = poly_eva(omega, CODEWORD_LEN - MESSAGE_LEN, locator);
+			DEBUG_NOTICE("%x ", tmp);
+			//tmp = gf_div(tmp, (locator * (CODEWORD_LEN - MESSAGE_LEN + 1)) % (GF_FIELD - 1));
+			DEBUG_NOTICE("%x ", tmp);
+			tmp = gf_div(tmp, poly_eva(tao_dev, CODEWORD_LEN - MESSAGE_LEN, locator));
+			DEBUG_NOTICE("%x ", tmp);
+			//phi[i] = gf_add(tmp, received_polynomial[i]);
+			r_seq[i] = tmp;
+			DEBUG_NOTICE("\n");
+		}
+		else
+		{
+			DEBUG_NOTICE("cal: %d | %x\n", i, r_seq[i]);
+			r_seq[i] = r_seq[i];
+		}
+	}
+
+#if (1 == CFG_DEBUG_INFO)
+	DEBUG_INFO("recover_erasure_codeword: ");
+	for(i = 0; i < CODEWORD_LEN; i++)
+	{
+		DEBUG_INFO("%x ", r_seq[i]);
 	}
 	DEBUG_INFO("\n");
 #if 0
