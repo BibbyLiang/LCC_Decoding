@@ -120,7 +120,11 @@ void main()
 		hamm_err = 0;
 		memset(skip_hist, 0, sizeof(long long) * pow_val);
 		memset(pgd_hist, 0, sizeof(long long) * pow_val);
+#if (1 == CFG_ADAPTIVE_PARALLEL)
+		memset(round_hist, 0, sizeof(long long) * (pow_val + 1));
+#else
 		memset(round_hist, 0, sizeof(long long) * (pow_val / PARALLEL_BATCH_NUM + 1));
+#endif
 		memset(latency_per_round_add, 0, sizeof(long long) * batch_size);
 		memset(latency_per_round_mul, 0, sizeof(long long) * batch_size);
 
@@ -503,7 +507,11 @@ void main()
 				}
 				DEBUG_SYS("Latency: %f %f\n", latency_add, latency_mul);
 				avg_round = 0;
+#if (1 == CFG_ADAPTIVE_PARALLEL)
+				for(i = 0; i < (pow_val + 1); i++)
+#else
 				for(i = 0; i < (pow_val / PARALLEL_BATCH_NUM + 1); i++)
+#endif				
 				{
 					avg_round = avg_round + (float)(round_hist[i] * (i));
 				}
@@ -665,14 +673,20 @@ void main()
 			}
 		}
 		avg_round = 0;
+#if (1 == CFG_ADAPTIVE_PARALLEL)
+		for(i = 0; i < (pow_val + 1); i++)
+		{
+#else
 		for(i = 0; i < (pow_val / PARALLEL_BATCH_NUM + 1); i++)
 		{
+#endif		
 			if(0 != round_hist[i])
 			{
 				DEBUG_SYS("round_hist: %ld %ld\n", i, round_hist[i]);
 			}
 			avg_round = avg_round + (float)(round_hist[i] * (i));
 		}
+	
 		DEBUG_SYS("avg_round: %f\n", avg_round / (float)(iter + 1));
 
 		DEBUG_SYS("Uncoded Results: %.10lf %.10lf %.10lf\n", 
@@ -720,7 +734,11 @@ void main()
 		{
 			fprintf(frc, "pgd_hist: %ld %ld\n", i, pgd_hist[i]);
 		}
+#if (1 == CFG_ADAPTIVE_PARALLEL)
+		for(i = 0; i < (pow_val + 1); i++)
+#else
 		for(i = 0; i < (pow_val / PARALLEL_BATCH_NUM + 1); i++)
+#endif		
 		{
 			fprintf(frc, "round_hist: %ld %ld\n", i, round_hist[i]);
 		}
