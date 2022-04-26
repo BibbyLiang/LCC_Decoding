@@ -171,6 +171,11 @@ int chnl_rel_cal(float **input_seq,
 		d1 = (input_seq[i][0] - (-1.0)) * (input_seq[i][0] - (-1.0))
 				+ (input_seq[i][1] - (0.0)) * (input_seq[i][1] - (0.0));
 
+#if 1
+		d0 = d0 / 1e4;
+		d1 = d1 / 1e4;
+#endif
+
 		/*for BPSK*/
 		map[i][0] = 1 / (PI * n0) * exp((-d0) / n0);
         map[i][1] = 1 / (PI * n0) * exp((-d1) / n0);
@@ -181,6 +186,17 @@ int chnl_rel_cal(float **input_seq,
         		   d1,
         		   map[i][0],
         		   map[i][1]);
+        if((0 == map[i][0])
+        	|| (0 == map[i][1]))
+        {
+        	DEBUG_INFO("map: %d %f | %f %f | %f %f\n",
+        			  i,
+        			  n0,
+        			  map[i][0],
+        			  map[i][0],
+        			  d0,
+        			  d1);
+        }
 	}
 
 	for(i = 0; i < GF_FIELD; i++)
@@ -215,9 +231,42 @@ int chnl_rel_cal(float **input_seq,
         {
             temp = temp + chnl_rel_matrix[j][i];
         }
+        
+        /*special process*/
+#if 0        
+        if(0 == temp)
+        {
+        	if(0xFF == received_polynomial[i])
+        	{
+        		chnl_rel_matrix[0][i] = 1;
+        	}
+        	else
+        	{
+        		chnl_rel_matrix[received_polynomial[i] + 1][i] = 1;
+        	}
+        	continue;
+        }
+#endif        
+
         for (j = 0; j < GF_FIELD; j++)
         {
             chnl_rel_matrix[j][i] = chnl_rel_matrix[j][i] / temp;
+            if(chnl_rel_matrix[j][i] != chnl_rel_matrix[j][i])
+            {
+            	DEBUG_SYS("NAN: %d %d | %f %f | %f %f %f %f %f %f %f %f\n",
+            			   i,
+            	           j,
+            	           temp,
+            	           chnl_rel_matrix[j][i],
+            	           input_seq[i * GF_Q][0],
+            	           input_seq[i * GF_Q + 1][0],
+            	           input_seq[i * GF_Q + 2][0],
+            	           input_seq[i * GF_Q + 3][0],
+            	           input_seq[i * GF_Q + 4][0],
+            	           input_seq[i * GF_Q + 5][0],
+            	           input_seq[i * GF_Q + 6][0],
+            	           input_seq[i * GF_Q + 7][0]);
+            }
 			DEBUG_NOTICE("chnl_rel: %ld %ld | %f\n", i, power_polynomial_table[j][0], chnl_rel_matrix[j][i]);
         }
     }

@@ -4,6 +4,7 @@
 #include "gf_cal.h"
 #include "mod.h"
 #include "encoding.h"
+#include "as_decoding.h"
 
 #if (3 == GF_Q)
 /*n = 7, k = 3*/

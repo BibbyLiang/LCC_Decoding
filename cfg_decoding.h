@@ -1,7 +1,7 @@
 #ifndef CFG_DECODING_H
 #define CFG_DECODING_H
 
-#define GF_Q			 4
+#define GF_Q			 8
 #define GF_CAL_COUNT	 1
 
 #define SYS_ENC			 1
@@ -10,7 +10,8 @@
 
 #define EARLY_TERMINATION		0
 #define EARLY_TERMINATION_NUM	100
-#define OUTPUT_LOG				0
+#define OUTPUT_LOG				1
+#define DEBUG_LOG				0
 
 #define RELEX_ORDER				1
 #define SIMPLE_ASD				0
@@ -31,7 +32,7 @@
 
 #define CFG_PARTIALLY_PARALLEL	1
 #define PARALLEL_BATCH_NUM		1//BATCH_NUM * BATCH_SIZE = TOTAL_NUM
-#define CFG_PARALLEL_FAST_SKIP	1
+#define CFG_PARALLEL_FAST_SKIP	0
 #define CFG_STORE_PARALEL		0
 #define CFG_STORE_LEN			0
 #define CFG_GROUP_SCHEME		1
@@ -41,6 +42,10 @@
 #define CFG_IMD_STORE			1
 
 #define CFG_ADAPTIVE_PARALLEL	1
+#define CFG_ADAPTIVE_SIZE		64
+#define CFG_CHNL_REL_THRD		50
+
+#define CFG_RE_ARRANGE_TST_VCT	1//not finish now, need to be checked and move to adaptive mode
 
 #define BF_INTERPOLATION		0
 
@@ -48,7 +53,7 @@
 #define LEX_TABLE_EXPAND_SIZE	4
 #define YITA					8
 
-#define SHORTEN_LEN				0
+#define SHORTEN_LEN				7
 
 #if (1 == RE_ENCODING)
 #define Y_WEIGHT				(-1)

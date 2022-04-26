@@ -4,6 +4,7 @@
 #include "debug_info.h"
 #include "gf_cal.h"
 #include "mod.h"
+#include "as_decoding.h"
 
 float **recv_seq;
 float recv_rel[CODEWORD_LEN];

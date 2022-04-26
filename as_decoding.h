@@ -22,6 +22,10 @@
 #define ROOT_SIZE				1
 #endif
 
+#if (1 == DEBUG_LOG)
+extern FILE *frc_debug;
+#endif
+
 extern unsigned char output_polynomial[CODEWORD_LEN];
 extern unsigned char decoded_codeword[CODEWORD_LEN];
 extern unsigned char decoded_message[MESSAGE_LEN];
@@ -51,6 +55,12 @@ extern long long *pgd_hist;
 extern long long *round_hist;
 
 extern long long best_tst_vct_diff;
+extern unsigned char **tst_vct;
+extern unsigned char tst_vct_debug[CODEWORD_LEN];
+
+#if (1 == CFG_IMD_STORE)
+extern long long intp_cnt;
+#endif
 
 extern int as_decoding();
 extern int g_term_malloc();
@@ -65,7 +75,7 @@ extern long long hamm_distance_bit_cal(unsigned char *a,
 									  			  unsigned char *b,
 									  			  long long len);
 #if (1 == RE_ENCODING)
-#if (CFG_RR_MODE == BMA_RR)
+#if 1//(CFG_RR_MODE == BMA_RR)
 extern int uncommon_dfs_rr_recur(unsigned char *g_c_q,
 								  unsigned char *g_c_0_y,
 								  long long m,
