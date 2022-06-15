@@ -1196,7 +1196,6 @@ int erasure_decoding_use(unsigned char *r_seq, unsigned char *erasure_group)
 		}
 	}
 	find_flag = 0;
-	
 	syndrome_cal(erasure_polynomial, syndrome,
 				  CODEWORD_LEN, MESSAGE_LEN);
 	tao_cal(erasure_group);

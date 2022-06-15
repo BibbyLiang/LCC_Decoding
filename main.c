@@ -124,6 +124,7 @@ void main()
 		uncoded_symbol_err = 0;
 		uncoded_frame_err = 0;
 		hamm_err = 0;
+		time_measure = 0;
 		memset(skip_hist, 0, sizeof(long long) * pow_val);
 		memset(pgd_hist, 0, sizeof(long long) * pow_val);
 #if (1 == CFG_ADAPTIVE_PARALLEL)
@@ -275,6 +276,7 @@ void main()
 			mul_assign();
 			gf_count_switch(1);
 			/*re-encoding transform*/
+
 			re_encoding();
 
 			/*GS decoding*/
@@ -655,7 +657,7 @@ void main()
 /*more than 10 errors are found, and 10% simulation times have been excuted*/
 #if (1 == EARLY_TERMINATION)
 			if((EARLY_TERMINATION_NUM <= (frame_err - hamm_err))
-				&& ((iter_cnt / 10) < iter))
+				&& ((iter_cnt / 100000) < iter))
 			{
 				/*simulation times are enough, go to next Eb/N0 point*/
 				break;
@@ -762,6 +764,7 @@ void main()
 		}
 	
 		DEBUG_SYS("avg_round: %f\n", avg_round / (float)(iter + 1));
+		DEBUG_SYS("time_measure: %f\n", time_measure / (float)(iter + 1));
 
 		DEBUG_SYS("Uncoded Results: %.10lf %.10lf %.10lf\n", 
 			    (double)uncoded_frame_err / (double)(iter + 1),
@@ -817,6 +820,7 @@ void main()
 			fprintf(frc, "round_hist: %ld %ld\n", i, round_hist[i]);
 		}
 		fprintf(frc, "avg_round: %f\n", avg_round / (float)(iter + 1));
+		fprintf(frc, "time_measure: %f\n", time_measure / (float)(iter + 1));
 		fprintf(frc, "Uncoded Results: %.10lf %.10lf %.10lf\n", 
 			    (double)uncoded_frame_err / (double)(iter + 1),
 			    (double)uncoded_symbol_err / (double)(iter + 1) / CODEWORD_LEN * BITS_PER_SYMBOL_BPSK,

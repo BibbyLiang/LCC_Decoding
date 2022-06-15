@@ -129,6 +129,12 @@ long long *adaptive_batch_num;
 #endif
 long long chnl_rel_thrd_cnt = 0;
 
+long long ml_tst_vct_recv_diff = 0;
+long long ml_tst_vct_enc_diff = 0;
+
+float time_measure = 0;
+clock_t start_measure, stop_measure;
+
 int poly_mul(unsigned char *a,
 				unsigned char *b,
 				unsigned char *product,
@@ -1350,10 +1356,12 @@ int adaptive_parallel_init()
 			adaptive_batch_num[i] = 0;
 			continue;
 		}
+		
+#if (0 == CFG_GROUP_METHOD)
 #if 1
-		if(YITA >= (i * 3))
+		if(YITA >= (i * 6))
 		{
-			vct_inc = (long long)pow(2, i * 3);
+			vct_inc = (long long)pow(2, i * 6);
 		}
 #else
 		if(pow_val >= chnl_rel_thrd_cnt)
@@ -1395,7 +1403,38 @@ int adaptive_parallel_init()
 			adaptive_batch_num[i] = pow_val - vct_cnt;
 			vct_cnt = pow_val;
 		}
-		DEBUG_INFO("adaptive_batch_num: %ld | %ld\n",
+#else
+		if(0 == i)
+		{
+			adaptive_batch_num[i] = 1;
+		}
+		else if(1 == i)
+		{
+			if(CFG_ADAPTIVE_DELTA >= CFG_ADAPTIVE_SIZE)
+			{
+				adaptive_batch_num[i] = CFG_ADAPTIVE_SIZE - 1;
+			}
+			else
+			{
+				adaptive_batch_num[i] = CFG_ADAPTIVE_DELTA;
+			}
+		}
+		else if(2 == i)
+		{
+			adaptive_batch_num[i] = CFG_ADAPTIVE_SIZE - ((adaptive_batch_num[0]) + (adaptive_batch_num[1]));
+			if(0 == adaptive_batch_num[i])
+			{
+				adaptive_batch_num[i] = CFG_ADAPTIVE_SIZE;
+			}
+		}
+		else
+		{
+			adaptive_batch_num[i] = CFG_ADAPTIVE_SIZE;
+		}
+		vct_cnt = vct_cnt + adaptive_batch_num[i];
+#endif
+		
+		DEBUG_SYS("adaptive_batch_num: %ld | %ld\n",
 		           i,
 		           adaptive_batch_num[i]);
 	}
@@ -3170,6 +3209,35 @@ int uncommon_fast_msg_get(long long l)
 		{
 			DEBUG_NOTICE("q: %ld | %x %x\n", i, q0[i], q1[i]);
 		}
+		
+#if (1 == CFG_Y_ROOTS_SKIP)
+	unsigned char tmp_q1_poly_val[CODEWORD_LEN];
+	memset(tmp_q1_poly_val, 0xFF, sizeof(unsigned char) * CODEWORD_LEN);
+	unsigned char q1_root_cnt = 0xFF;
+	for(i = 0; i < CODEWORD_LEN; i++)
+	{
+		tmp_q1_poly_val[i] = poly_eva(q1,
+								  	  CODEWORD_LEN,
+								  	  power_polynomial_table[i + 1][0]);
+		if(0xFF == tmp_q1_poly_val[i])
+		{
+			q1_root_cnt++;
+		}
+	}
+	unsigned char tmp_q1_0 = 0;
+	tmp_q1_0 = poly_eva(q1,
+						CODEWORD_LEN,
+						power_polynomial_table[0][0]);;
+	if(0xFF == tmp_q1_0)
+	{
+		q1_root_cnt++;
+	}
+	if(q1_root_cnt < degree_q1)
+	{
+		return 0;
+	}
+#endif
+		
 #if 0
 		for(i = 0; i < CODEWORD_LEN; i++)
 		{
@@ -3349,7 +3417,7 @@ int uncommon_fast_msg_get(long long l)
 #endif				
 				continue;
 			}
-
+			
 			q0_val = poly_eva(q0,
 				              CODEWORD_LEN,
 				              power_polynomial_table[i + 1][0]);		
@@ -4078,6 +4146,13 @@ int fast_check_tst_vct_radius(long long dcd_cwd_idx, long long tst_vct_idx)
 		{
 			cwd_diff_cnt++;
 		}
+		
+#if 1
+		if(cwd_diff_cnt > ((CODEWORD_LEN - MESSAGE_LEN) / 2))
+		{
+			break;
+		}
+#endif
 	}
 
 	return cwd_diff_cnt;
@@ -4514,7 +4589,7 @@ int rearrange_tst_vct(long long tst_vct_proc_num, long long round_idx)
 	{
 		//DEBUG_SYS("vct_cnt_err: %ld\n", vct_cnt);
 	}
-
+	start_measure = clock();
 	for(i = tst_vct_proc_num; i < pow_val; i++)
 	{
 		tst_skip_cnt = fast_skip_tst_vct(adaptive_vct_seq[i], tst_vct_proc_num);
@@ -4534,6 +4609,12 @@ int rearrange_tst_vct(long long tst_vct_proc_num, long long round_idx)
 #if (1 == CFG_ADAPTIVE_PARALLEL)
 	for(i = round_idx; i < pow_val; i++)
 	{
+		if(i == (round_idx + 1))
+		{
+			stop_measure = clock();
+			time_measure = time_measure + (stop_measure - start_measure);
+		}
+
 		for(j = 0; j < pow_val; j++)
 		{
 			//DEBUG_INFO("%s: %ld %ld\n", __func__, i, j);
@@ -4586,6 +4667,12 @@ int rearrange_tst_vct(long long tst_vct_proc_num, long long round_idx)
 #else
 	for(i = round_idx; i < batch_size; i++)
 	{
+		if(i == (round_idx + 1))
+		{
+			stop_measure = clock();
+			time_measure = time_measure + (stop_measure - start_measure);
+		}
+
 		for(j = 0; j < round_size; j++)
 		{
 			DEBUG_INFO("%s: %ld %ld\n", __func__, i, j);
@@ -6874,7 +6961,7 @@ int as_decoding()
 #if (1 == CFG_STORE_PARALEL)
 	store_place = -1;
 #endif
-	
+
 #if (1 == CFG_ADAPTIVE_PARALLEL)
 	long long batch_size = pow_val;
 	long long round_size = pow_val;
@@ -6887,6 +6974,7 @@ int as_decoding()
 	long long latency_worst_case_add = 0, latency_worst_case_mul = 0;
 	long long add_prev = add_cnt, mul_prev = mul_cnt + div_cnt;
 	long long add_prev_round = add_cnt, mul_prev_round = mul_cnt + div_cnt;
+
 	for(l = 0; l < batch_size; l++)//round_idx
 	{
 		latency_worst_case_add = 0;
@@ -6968,7 +7056,9 @@ int as_decoding()
 			uncommon_interpolation(tst_vct_seq[k][l]);
 
 #if (CFG_RR_MODE == FAST_RR_M1)
+			//gf_count_switch(0);
 			uncommon_fast_msg_get(tst_vct_seq[k][l]);
+			//gf_count_switch(1);
 #endif
 
 #if (CFG_RR_MODE == BMA_RR)
@@ -6978,8 +7068,7 @@ int as_decoding()
 			{
 				continue;
 			}
-#endif			
-			
+#endif
 			uncommon_rr_factorization_recur(tst_vct_seq[k][l]);
 			uncommon_recover_codeword(tst_vct_seq[k][l]);
 #endif
@@ -6990,8 +7079,7 @@ int as_decoding()
 			{
 				continue;
 			}
-#endif			
-			
+#endif
 			uncommon_rr_factorization_recur(tst_vct_seq[k][l]);
 			uncommon_recover_codeword(tst_vct_seq[k][l]);
 #endif
@@ -7056,6 +7144,28 @@ int as_decoding()
 			ml_result = MLcriterion(uncommon_decoded_codeword[tst_vct_seq[k][l]]);
 			if(1 == ml_result)
 			{
+				ml_tst_vct_recv_diff = 0;
+				ml_tst_vct_enc_diff = 0;
+				for(i = 0; i < CODEWORD_LEN; i++)
+				{
+					if(uncommon_decoded_codeword[tst_vct_seq[k][l]][i] != received_polynomial[i])
+					{
+						ml_tst_vct_recv_diff++;
+					}
+					if(uncommon_decoded_codeword[0][i] != received_polynomial[i])
+					{
+						ml_tst_vct_enc_diff++;
+					}
+				}
+
+				if(0 != last_round)
+				{
+					DEBUG_SYS("ml_diff: %ld %ld %ld\n",
+							  ml_tst_vct_recv_diff,
+							  ml_tst_vct_enc_diff,
+							  last_round);
+				}
+
 				DEBUG_INFO("ml_result: %ld | %d %d\n", l, ml_result, tst_vct_seq[k][l]);
 				break;
 			}
@@ -7067,17 +7177,39 @@ int as_decoding()
 		}
 #endif
 	}
+
+	check_lcc_result();
+
 #if (1 == CFG_PRG_DECODING)		
 	if(0 == ml_result)
 	{
 		DEBUG_INFO("No early termination for PRG_DECODING\n");
 #if 0
 		return 0;
-#endif		
-	}
 #endif
 
-	check_lcc_result();
+		ml_tst_vct_recv_diff = 0;
+		ml_tst_vct_enc_diff = 0;
+		for(i = 0; i < CODEWORD_LEN; i++)
+		{
+			if(decoded_codeword[i] != encoded_polynomial[i])
+			{
+				ml_tst_vct_enc_diff++;
+			}
+			if(decoded_codeword[i] != received_polynomial[i])
+			{
+				ml_tst_vct_recv_diff++;
+			}
+		}
+
+		if(0 == ml_tst_vct_enc_diff)
+		{
+			DEBUG_INFO("no_ml_diff: %ld %ld\n",
+				  	  ml_tst_vct_recv_diff,
+				  	  ml_tst_vct_enc_diff);
+		}
+	}
+#endif
 
 	uncommon_interpolation_exit();
 

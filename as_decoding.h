@@ -62,6 +62,12 @@ extern unsigned char tst_vct_debug[CODEWORD_LEN];
 extern long long intp_cnt;
 #endif
 
+extern long long ml_tst_vct_recv_diff;
+extern long long ml_tst_vct_enc_diff;
+
+extern float time_measure;
+extern clock_t start_measure, stop_measure;
+
 extern int as_decoding();
 extern int g_term_malloc();
 extern int g_term_destroy();
@@ -74,7 +80,7 @@ extern long long hamm_distance_code_cal(unsigned char *a,
 extern long long hamm_distance_bit_cal(unsigned char *a,
 									  			  unsigned char *b,
 									  			  long long len);
-#if (1 == RE_ENCODING)
+#if 1//(1 == RE_ENCODING)
 #if 1//(CFG_RR_MODE == BMA_RR)
 extern int uncommon_dfs_rr_recur(unsigned char *g_c_q,
 								  unsigned char *g_c_0_y,

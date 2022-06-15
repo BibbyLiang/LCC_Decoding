@@ -10,7 +10,7 @@
 
 #define EARLY_TERMINATION		0
 #define EARLY_TERMINATION_NUM	100
-#define OUTPUT_LOG				1
+#define OUTPUT_LOG				0
 #define DEBUG_LOG				0
 
 #define RELEX_ORDER				1
@@ -38,20 +38,24 @@
 #define CFG_GROUP_SCHEME		1
 
 #define CFG_Q0_FAST_SKIP		1//44
-#define CFG_PRG_DECODING		1
+#define CFG_PRG_DECODING		0
 #define CFG_IMD_STORE			1
 
-#define CFG_ADAPTIVE_PARALLEL	1
-#define CFG_ADAPTIVE_SIZE		64
+#define CFG_ADAPTIVE_PARALLEL	0
+#define CFG_ADAPTIVE_SIZE		8
 #define CFG_CHNL_REL_THRD		50
+#define CFG_ADAPTIVE_DELTA		8
+#define CFG_GROUP_METHOD		1
 
-#define CFG_RE_ARRANGE_TST_VCT	1//not finish now, need to be checked and move to adaptive mode
+#define CFG_RE_ARRANGE_TST_VCT	0//not finish now, need to be checked and move to adaptive mode
+
+#define CFG_Y_ROOTS_SKIP		1
 
 #define BF_INTERPOLATION		0
 
 #define S_MUL					1
 #define LEX_TABLE_EXPAND_SIZE	4
-#define YITA					8
+#define YITA					0
 
 #define SHORTEN_LEN				7
 
@@ -76,7 +80,7 @@
 #if (0 == RE_ENCODING)
 #define CFG_RR_MODE			0
 #else
-#define CFG_RR_MODE			FAST_RR_M1
+#define CFG_RR_MODE			CONV_RE_ENC_SYS
 #endif
 
 /*there may be some problems. and it should be used with BF_INTERPOLATION*/
